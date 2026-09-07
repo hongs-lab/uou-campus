@@ -44,7 +44,7 @@ const NextClass = ({
     return (
       <div className={s.classRow}>
         <button type="button" className={s.classAdd} onClick={onOpen}>
-          시간표 넣기 — 다음 수업까지 안내합니다
+          시간표 넣기
         </button>
       </div>
     );
