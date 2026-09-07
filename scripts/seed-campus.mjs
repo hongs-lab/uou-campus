@@ -21,6 +21,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { mendGraph } from './mend-graph.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = resolve(HERE, 'osm-campus.json');
 const OUT = resolve(HERE, '../src/data/campus.json');
@@ -385,6 +387,21 @@ for (const chain of chains) {
   });
 }
 
+/* ── 4.5 OSM 이 빠뜨린 이음매 메우기 ────────────────────────────────────
+ * OSM 은 계단과 보행로를 따로 그려 놓고 만나는 자리에 점을 안 물려 둔 곳이
+ * 많다. 그대로 두면 계단이 허공에서 끝나서 길찾기가 못 탄다. 자세한 규칙은
+ * scripts/mend-graph.mjs 에 적어 뒀다.
+ */
+
+const mended = mendGraph({ nodes, edges });
+
+/* 여기서부터 간선이 늘었다 — 번호를 배열 길이로 매기면 겹칠 수 있다. */
+let edgeSeq = edges.length;
+const nextEdgeId = () => {
+  edgeSeq += 1;
+  return `e${edgeSeq}`;
+};
+
 /* ── 5. 건물을 가장 가까운 길에 매단다 ──────────────────────────────────── */
 
 const normalize = (s) => s.replace(/[\s·/]/g, '');
@@ -410,7 +427,7 @@ const onRoad = new Set(
 /** 건물에서 걸어 나와 길에 붙는 접속선. 실제 출입구가 아니라 모형이다. */
 const connect = (buildingId, near, why) => {
   edges.push({
-    id: `e${edges.length + 1}`,
+    id: nextEdgeId(),
     from: buildingId,
     to: near.node.id,
     surface: 'path',
@@ -683,6 +700,14 @@ console.log(
   `  계단 ${count((e) => e.surface === 'stairs')}개 · 보행로 ${count((e) => e.surface === 'path')}개 · 차도 ${count((e) => e.surface === 'road')}개`,
 );
 console.log(`  출입구: ${gates.join(', ') || '못 찾음'}`);
+console.log(
+  `  이어 붙인 끊어진 자리 ${mended.length}곳` +
+    (mended.length
+      ? ` (${mended
+          .map((x) => `${x.surface} ${x.gap.toFixed(1)}m`)
+          .join(' · ')})`
+      : ''),
+);
 console.log(`  지름길 간선 ${keptEdges.filter((e) => e.shortcut).length}개`);
 for (const line of corridorReport) console.log(`    ${line}`);
 if (nodes.length !== keptNodes.length) {
