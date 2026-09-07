@@ -6737,16 +6737,6 @@
       "source": "osm"
     },
     {
-      "id": "e309",
-      "from": "n256",
-      "to": "n118",
-      "surface": "path",
-      "shortcut": false,
-      "covered": true,
-      "connector": false,
-      "source": "osm"
-    },
-    {
       "id": "e310",
       "from": "n209",
       "to": "n7",
@@ -8066,6 +8056,72 @@
       "connector": true,
       "source": "assumed",
       "note": "건물 중심에서 가장 가까운 차도까지 48m 를 곧게 이었다"
+    },
+    {
+      "id": "e421",
+      "from": "j-new-2",
+      "to": "n115",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "건물 중심에서 가장 가까운 길까지 29m 를 곧게 이었다"
+    },
+    {
+      "id": "e422",
+      "from": "j-new-4",
+      "to": "n114",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "건물 중심에서 가장 가까운 길까지 18m 를 곧게 이었다"
+    },
+    {
+      "id": "e423",
+      "from": "j-new-5",
+      "to": "n117",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "건물 중심에서 가장 가까운 길까지 14m 를 곧게 이었다"
+    },
+    {
+      "id": "e424",
+      "from": "j-new-1",
+      "to": "n232",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "문에서 가장 가까운 보행로까지 21m"
+    },
+    {
+      "id": "e425",
+      "from": "j-new-3",
+      "to": "n118",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "e309 를 새 길목에서 쪼갬 (8m)"
+    },
+    {
+      "id": "e426",
+      "from": "j-new-3",
+      "to": "n256",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "e309 를 새 길목에서 쪼갬 (10m)"
     }
   ]
 }
