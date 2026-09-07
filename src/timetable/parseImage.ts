@@ -131,14 +131,36 @@ export const fitTimeAxis = (
   const pitch = 60 / minutesPerPixel;
   if (pitch < 20 || pitch > 200) return null;
 
-  return { originMinutes: first.hour * 60, originY: first.y, minutesPerPixel };
+  /*
+   * 라벨이 가리키는 자리와 그 시각이 시작하는 자리는 다르다.
+   *
+   * `9시` 는 9시 칸 **가운데**에 놓이지만, 9시에 시작하는 수업은 칸 **위**에서
+   * 시작한다. 라벨 자리를 그대로 9시로 읽으면 시간표 전체가 반 칸(30분) 밀린다.
+   * 그래서 기준을 반 칸 위로 올린다.
+   *
+   * 이걸 '30분 빼기' 로 뭉뚱그리면 안 된다. 칸 하나가 한 시간이 아닌 시간표에서
+   * 또 어긋난다. 반 칸은 눈금에서 바로 나온다.
+   */
+  return {
+    originMinutes: first.hour * 60,
+    originY: first.y - pitch / 2,
+    minutesPerPixel,
+  };
 };
 
 export const minutesAt = (axis: TimeAxis, y: number): number =>
   axis.originMinutes + (y - axis.originY) * axis.minutesPerPixel;
 
-/** 5분 단위로 맞춘다. 그림에서 잰 값이라 1분 단위는 뜻이 없다. */
-export const snap = (minutes: number, step = 5): number =>
+/**
+ * 정각으로 맞춘다.
+ *
+ * 수업은 교시로 돌아간다 — 1교시 9시, 6교시 14시. 그림에서 잰 값은 몇 분씩
+ * 어긋나기 마련인데, 실제 시각이 늘 정각이라는 걸 알고 있으니 그 잔떨림을
+ * 들고 다닐 이유가 없다. 08:47 이든 09:12 든 답은 09:00 이다.
+ */
+export const HOUR = 60;
+
+export const snap = (minutes: number, step = HOUR): number =>
   Math.round(minutes / step) * step;
 
 export { runsInColumn, isBackdrop, isInk };
@@ -157,16 +179,25 @@ interface Word {
 /**
  * 인식기 부속의 자리.
  *
- * 번들러를 거치면 tesseract 가 제 부속(작업자 스크립트·WASM·언어 데이터)을
- * 어디서 찾아야 할지 못 짚는다. 판을 박아 직접 일러 준다 — 판이 흐르면 어느 날
- * 갑자기 안 되는 쪽이 더 나쁘다.
+ * 우리 쪽에서 내보낸다(`scripts/copy-ocr.mjs`). 남의 CDN 을 그대로 두면 아예
+ * 안 돈다 — 브라우저는 다른 출처의 스크립트로 Worker 를 못 만들어서, 진행률
+ * 콜백조차 안 불린 채 조용히 멈춰 있었다. 우리 쪽에 두면 그 문제도 없고,
+ * 신호가 죽어도 서비스 워커가 들고 있던 것으로 돈다.
  */
 const OCR_ASSETS = {
-  workerPath:
-    'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
-  corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@6.1.2',
-  langPath: 'https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0_fast',
+  workerPath: '/ocr/worker.min.js',
+  corePath: '/ocr',
+  langPath: '/ocr',
 } as const;
+
+/**
+ * 한국어 하나만 싣는다.
+ *
+ * 영어까지 실으면 13MB 가 더 붙는데, 재 보니 한국어만으로 요일·시각·강의실이
+ * 다 읽힌다. 하이픈이 자주 빠져 `7-615` 가 `7615` 로 오지만 그건 `room.ts` 의
+ * 되살리기가 잡는다.
+ */
+const OCR_LANGS = ['kor'];
 
 /**
  * 글자 인식기는 쓸 때만 불러온다.
@@ -187,7 +218,7 @@ const readWords = async (
     mod.createWorker ??
     (mod as unknown as { default: typeof mod }).default.createWorker;
 
-  const worker = await createWorker(['kor', 'eng'], 1, {
+  const worker = await createWorker(OCR_LANGS, 1, {
     ...OCR_ASSETS,
     logger: (m: { status: string; progress: number }) =>
       onProgress?.(m.progress, m.status),
@@ -220,12 +251,29 @@ const ROOM_LIKE = /^\d{1,2}\s*[-–—−]?\s*[A-Za-z]?\d{2,4}$/;
 
 /* ── 전체 ─────────────────────────────────────────────────────────────── */
 
+/**
+ * 고른 파일 그대로 받는다.
+ *
+ * `<img>` 에 실어 `decode()` 를 기다리는 길도 있지만, 그쪽은 사진이 안 오면
+ * 영영 안 끝나는 수가 있다 — 실제로 그렇게 멈춰 봤다. `createImageBitmap` 은
+ * 못 읽으면 못 읽는다고 바로 말한다.
+ */
 export const parseTimetableImage = async (
-  image: CanvasImageSource & { width: number; height: number },
+  file: Blob,
   knownBuildings: Set<number>,
   onProgress?: (ratio: number, what: string) => void,
 ): Promise<ParseResult> => {
   const warnings: string[] = [];
+
+  let image: ImageBitmap;
+  try {
+    image = await createImageBitmap(file);
+  } catch {
+    return {
+      slots: [],
+      warnings: ['그림을 못 읽었습니다. PNG 나 JPG 인지 확인해 주세요.'],
+    };
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = image.width;
@@ -234,6 +282,7 @@ export const parseTimetableImage = async (
   if (!ctx)
     return { slots: [], warnings: ['이 브라우저에서는 그림을 못 읽습니다.'] };
   ctx.drawImage(image, 0, 0);
+  image.close();
 
   const words = await readWords(canvas, onProgress);
 
@@ -300,17 +349,28 @@ export const parseTimetableImage = async (
       minHeight,
     )) {
       const startMinutes = snap(minutesAt(axis, run.top));
-      const endMinutes = snap(minutesAt(axis, run.bottom));
-      /* 10분도 안 되는 자국은 칸이 아니라 눈금이나 그림자다. */
-      if (endMinutes - startMinutes < 10) continue;
-
-      const inside = words.filter(
-        (w) =>
-          w.x > centre - pitch / 2 &&
-          w.right < centre + pitch / 2 &&
-          w.y >= run.top - 2 &&
-          w.bottom <= run.bottom + 2,
+      /* 정각으로 맞추다 보면 한 교시짜리가 0분으로 눌린다. 최소 한 시간은 준다. */
+      const endMinutes = Math.max(
+        snap(minutesAt(axis, run.bottom)),
+        startMinutes + HOUR,
       );
+      /* 한 교시의 절반도 안 되는 자국은 칸이 아니라 눈금이나 그림자다. */
+      if (minutesAt(axis, run.bottom) - minutesAt(axis, run.top) < HOUR / 2)
+        continue;
+
+      /*
+       * 낱말이 이 칸에 속하는지는 낱말의 가운데로 본다. 네 귀퉁이가 다 들어와야
+       * 한다고 하면, 칸 가장자리에 바싹 붙은 글자를 통째로 놓친다.
+       */
+      const inside = words.filter((w) => {
+        const cx = (w.x + w.right) / 2;
+        const cy = (w.y + w.bottom) / 2;
+        return (
+          Math.abs(cx - centre) < pitch / 2 &&
+          cy >= run.top - 4 &&
+          cy <= run.bottom + 4
+        );
+      });
 
       const roomWord = inside.find((w) => ROOM_LIKE.test(w.text));
       if (!roomWord) roomless += 1;

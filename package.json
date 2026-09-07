@@ -8,12 +8,13 @@
     "icons": "node scripts/make-icons.mjs",
     "font": "node scripts/make-font.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/make-font.mjs",
+    "prebuild": "node scripts/make-font.mjs && node scripts/copy-ocr.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ocr": "node scripts/copy-ocr.mjs"
   },
   "dependencies": {
     "@vanilla-extract/css": "^1.21.2",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tesseract.js-data/kor": "^1.0.0",
     "@types/leaflet": "^1.9.20",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
@@ -39,6 +41,7 @@
     "pretendard": "1.3.9",
     "prettier": "^3.9.6",
     "subset-font": "^2.7.0",
+    "tesseract.js-core": "^7.0.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.62.0",
     "vite": "^8.1.1"
