@@ -815,14 +815,6 @@
       "precision": "surveyed"
     },
     {
-      "id": "n102",
-      "kind": "junction",
-      "name": "",
-      "lat": 35.5445197,
-      "lng": 129.2576782,
-      "precision": "surveyed"
-    },
-    {
       "id": "n103",
       "kind": "junction",
       "name": "",
@@ -1575,14 +1567,6 @@
       "precision": "surveyed"
     },
     {
-      "id": "n197",
-      "kind": "junction",
-      "name": "",
-      "lat": 35.5426447,
-      "lng": 129.2567947,
-      "precision": "surveyed"
-    },
-    {
       "id": "n198",
       "kind": "junction",
       "name": "",
@@ -1612,14 +1596,6 @@
       "name": "",
       "lat": 35.5419026,
       "lng": 129.2566539,
-      "precision": "surveyed"
-    },
-    {
-      "id": "n202",
-      "kind": "junction",
-      "name": "",
-      "lat": 35.5419203,
-      "lng": 129.2560406,
       "precision": "surveyed"
     },
     {
@@ -1804,14 +1780,6 @@
       "name": "",
       "lat": 35.5448971,
       "lng": 129.2589514,
-      "precision": "surveyed"
-    },
-    {
-      "id": "n226",
-      "kind": "junction",
-      "name": "",
-      "lat": 35.5431899,
-      "lng": 129.2554805,
       "precision": "surveyed"
     },
     {
@@ -2851,6 +2819,87 @@
       "lng": 129.2592626810074,
       "precision": "surveyed",
       "no": 31
+    },
+    {
+      "id": "j1",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5419196,
+      "lng": 129.2560379,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j2",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5426504,
+      "lng": 129.2567926,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j3",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5431876,
+      "lng": 129.2554726,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j4",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5445129,
+      "lng": 129.2576498,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j5",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5423939,
+      "lng": 129.2575988,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j6",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5437385,
+      "lng": 129.2548831,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j7",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5452494,
+      "lng": 129.2514749,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j8",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5456586,
+      "lng": 129.257562,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
+    },
+    {
+      "id": "j9",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.5439284,
+      "lng": 129.2547204,
+      "precision": "surveyed",
+      "note": "끊어져 있던 길을 이으려고 기존 길 위에 새로 찍은 길목."
     }
   ],
   "edges": [
@@ -2975,7 +3024,7 @@
     {
       "id": "e8",
       "from": "n8",
-      "to": "n10",
+      "to": "j2",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -3243,7 +3292,7 @@
     {
       "id": "e30",
       "from": "n29",
-      "to": "n31",
+      "to": "j3",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -3417,34 +3466,12 @@
     {
       "id": "e45",
       "from": "n43",
-      "to": "n47",
+      "to": "j7",
       "surface": "road",
       "shortcut": false,
       "covered": false,
       "connector": false,
-      "source": "osm",
-      "via": [
-        {
-          "lat": 35.5445826,
-          "lng": 129.2517555
-        },
-        {
-          "lat": 35.5445182,
-          "lng": 129.2517826
-        },
-        {
-          "lat": 35.5444692,
-          "lng": 129.2517921
-        },
-        {
-          "lat": 35.544373,
-          "lng": 129.251774
-        },
-        {
-          "lat": 35.5441669,
-          "lng": 129.2517418
-        }
-      ]
+      "source": "osm"
     },
     {
       "id": "e46",
@@ -4058,7 +4085,7 @@
     {
       "id": "e95",
       "from": "n87",
-      "to": "n90",
+      "to": "j8",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -4068,26 +4095,6 @@
         {
           "lat": 35.54565,
           "lng": 129.2575241
-        },
-        {
-          "lat": 35.5456896,
-          "lng": 129.2576995
-        },
-        {
-          "lat": 35.5457823,
-          "lng": 129.2581107
-        },
-        {
-          "lat": 35.5458092,
-          "lng": 129.2582302
-        },
-        {
-          "lat": 35.5458167,
-          "lng": 129.2582746
-        },
-        {
-          "lat": 35.5458782,
-          "lng": 129.2583311
         }
       ]
     },
@@ -4210,7 +4217,7 @@
     {
       "id": "e107",
       "from": "n99",
-      "to": "n102",
+      "to": "j4",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -5583,7 +5590,7 @@
     {
       "id": "e215",
       "from": "n187",
-      "to": "n189",
+      "to": "j5",
       "surface": "path",
       "shortcut": false,
       "covered": false,
@@ -5711,7 +5718,7 @@
     {
       "id": "e226",
       "from": "n194",
-      "to": "n197",
+      "to": "j2",
       "surface": "path",
       "shortcut": false,
       "covered": false,
@@ -5777,7 +5784,7 @@
     {
       "id": "e232",
       "from": "n200",
-      "to": "n202",
+      "to": "j1",
       "surface": "path",
       "shortcut": false,
       "covered": false,
@@ -5797,7 +5804,7 @@
     {
       "id": "e234",
       "from": "n204",
-      "to": "n83",
+      "to": "j6",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -5829,7 +5836,7 @@
     {
       "id": "e237",
       "from": "n83",
-      "to": "n205",
+      "to": "j9",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -6168,7 +6175,7 @@
     {
       "id": "e264",
       "from": "n179",
-      "to": "n226",
+      "to": "j3",
       "surface": "stairs",
       "shortcut": false,
       "covered": false,
@@ -6384,7 +6391,7 @@
     {
       "id": "e281",
       "from": "n24",
-      "to": "n236",
+      "to": "j1",
       "surface": "road",
       "shortcut": false,
       "covered": false,
@@ -7282,7 +7289,7 @@
     {
       "id": "e352",
       "from": "n285",
-      "to": "n221",
+      "to": "j4",
       "surface": "path",
       "shortcut": false,
       "covered": false,
@@ -8122,6 +8129,228 @@
       "connector": false,
       "source": "assumed",
       "note": "e309 를 새 길목에서 쪼갬 (10m)"
+    },
+    {
+      "id": "k1",
+      "from": "j1",
+      "to": "n236",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k2",
+      "from": "j2",
+      "to": "n10",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k3",
+      "from": "j3",
+      "to": "n31",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k4",
+      "from": "j4",
+      "to": "n221",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k5",
+      "from": "n100",
+      "to": "n285",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 3m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k6",
+      "from": "j5",
+      "to": "n189",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k7",
+      "from": "n247",
+      "to": "j5",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 5m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k8",
+      "from": "j6",
+      "to": "n83",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k9",
+      "from": "n249",
+      "to": "j6",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 6m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k10",
+      "from": "j7",
+      "to": "n47",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm",
+      "via": [
+        {
+          "lat": 35.5445826,
+          "lng": 129.2517555
+        },
+        {
+          "lat": 35.5445182,
+          "lng": 129.2517826
+        },
+        {
+          "lat": 35.5444692,
+          "lng": 129.2517921
+        },
+        {
+          "lat": 35.544373,
+          "lng": 129.251774
+        },
+        {
+          "lat": 35.5441669,
+          "lng": 129.2517418
+        }
+      ]
+    },
+    {
+      "id": "k11",
+      "from": "n156",
+      "to": "j7",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 8m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k12",
+      "from": "j8",
+      "to": "n90",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm",
+      "via": [
+        {
+          "lat": 35.5456896,
+          "lng": 129.2576995
+        },
+        {
+          "lat": 35.5457823,
+          "lng": 129.2581107
+        },
+        {
+          "lat": 35.5458092,
+          "lng": 129.2582302
+        },
+        {
+          "lat": 35.5458167,
+          "lng": 129.2582746
+        },
+        {
+          "lat": 35.5458782,
+          "lng": 129.2583311
+        }
+      ]
+    },
+    {
+      "id": "k13",
+      "from": "n92",
+      "to": "j8",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 9m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k14",
+      "from": "j9",
+      "to": "n205",
+      "surface": "road",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "osm"
+    },
+    {
+      "id": "k15",
+      "from": "n248",
+      "to": "j9",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 10m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k16",
+      "from": "n258",
+      "to": "n11",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 11m 벌어진 채 끊겨 있던 자리를 이었다."
+    },
+    {
+      "id": "k17",
+      "from": "n284",
+      "to": "n285",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": false,
+      "source": "assumed",
+      "note": "OSM 에서 11m 벌어진 채 끊겨 있던 자리를 이었다."
     }
   ]
 }

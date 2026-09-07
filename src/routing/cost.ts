@@ -43,6 +43,23 @@ const ENTRY_PENALTY: Partial<Record<Surface, number>> = {
 };
 
 /**
+ * 걷는 거리에 얹는 작은 미움값(초/m).
+ *
+ * 시간만 세면 **4초 빠르다는 이유로 70m 를 더 걷는 길**이 이긴다. 실제로
+ * 식물원에서 해송홀까지가 그랬다 — 계단으로 436m 면 될 길을 508m 짜리 우회로로
+ * 돌아 놓고는 4초를 아꼈다고 했다. 사람은 그렇게 안 걷는다. 시간이 엇비슷하면
+ * 짧은 쪽으로 간다.
+ *
+ * 그래서 1m 마다 0.12초씩 더 미워한다. 걷는 데 실제로 드는 0.77초/m 에 견주면
+ * 16% 쯤이라, 확실히 빠른 길은 그대로 이기고 아슬아슬하게 이기던 우회로만 진다.
+ * 계단으로 치면 평지 대비 2.2배가 실질 2.04배가 되는 셈인데, 오르내림을 반반
+ * 섞은 계단 속도가 대략 그 언저리다.
+ *
+ * 고르는 데만 쓴다 — 화면에 내놓는 소요 시간은 secondsFor 그대로다.
+ */
+const METER_DISLIKE = 0.12;
+
+/**
  * 「지름길 우선」에서 표시된 지름길을 얼마나 싸게 칠지.
  * 0.45 면 지름길 1분을 27초처럼 친다 — 조금 돌더라도 아는 길로 붙는다.
  * 0 으로 두면 지름길만 골라 타느라 터무니없이 도는 길이 나온다.
@@ -69,7 +86,9 @@ export const costFor = (
   }
 
   const base =
-    options.profile === 'distance' ? meters : secondsFor(edge, meters);
+    options.profile === 'distance'
+      ? meters
+      : secondsFor(edge, meters) + METER_DISLIKE * meters;
 
   return options.profile === 'shortcut' && edge.shortcut
     ? base * SHORTCUT_DISCOUNT
