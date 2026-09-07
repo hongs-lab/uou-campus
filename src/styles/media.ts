@@ -24,6 +24,16 @@ export const SHEET =
 export const RAIL =
   `screen and (max-width: ${screen.tablet}) and (max-height: ${screen.short}) and (orientation: landscape)` as const;
 
-const media = { SHEET, RAIL } as const;
+/**
+ * 손에 들지 않은 화면. 폭도 높이도 남는다.
+ *
+ * 시트와 기둥의 나머지 전부다 — 시간표처럼 폰에서는 화면을 통째로 덮어야 하는
+ * 것이, 여기서는 가운데 카드로 앉아야 한다. 넓은 화면에서 폭을 다 쓰면 글줄이
+ * 지나치게 길어지고 단추가 우스꽝스럽게 커진다.
+ */
+export const WIDE =
+  `screen and (min-width: ${screen.wide}) and (min-height: ${screen.tall})` as const;
+
+const media = { SHEET, RAIL, WIDE } as const;
 
 export default media;

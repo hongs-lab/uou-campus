@@ -1,5 +1,5 @@
 import { style } from '@vanilla-extract/css';
-import { flex, font, layout, media, spacing, theme } from '@/styles';
+import { elevation, flex, font, layout, media, spacing, theme } from '@/styles';
 
 /* 장소 고르기(PlacePicker)와 같은 꼴의 전체 화면. 손에 든 화면에서 표를 고치려면 자리가 필요하다. */
 export const sheet = style([
@@ -13,6 +13,29 @@ export const sheet = style([
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     paddingLeft: 'env(safe-area-inset-left, 0px)',
     paddingRight: 'env(safe-area-inset-right, 0px)',
+
+    '@media': {
+      /*
+       * 넓은 화면에서는 화면을 통째로 덮지 않는다.
+       *
+       * 폰에서야 표를 고치려면 화면이 다 필요하지만, 데스크톱에서 같은 것을
+       * 그대로 펼치면 글줄이 지나치게 길어지고 저장 단추가 창을 가로지른다.
+       * 가운데 카드로 앉혀 읽을 만한 폭만 쓴다 — 지도 위에 뜨는 다른 패널들과
+       * 같은 꼴이다.
+       */
+      [media.WIDE]: {
+        top: '5vh',
+        bottom: '5vh',
+        left: '50%',
+        right: 'auto',
+        transform: 'translateX(-50%)',
+        width: 'min(620px, 92vw)',
+        borderRadius: layout.radius.md,
+        border: `1px solid ${theme.outline}`,
+        boxShadow: elevation.overlay,
+        overflow: 'hidden',
+      },
+    },
   },
 ]);
 

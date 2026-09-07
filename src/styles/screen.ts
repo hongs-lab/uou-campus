@@ -13,6 +13,8 @@ const screen = {
   short: '500px',
   /** 위의 바로 다음 값. `min-height` 로 뒤집어 쓸 때 한 픽셀도 겹치지 않게. */
   tall: '501px',
+  /** `phone` 의 바로 다음 값. `min-width` 로 뒤집어 쓸 때 쓴다. */
+  wide: '769px',
 } as const;
 
 export default screen;

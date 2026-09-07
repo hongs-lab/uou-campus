@@ -29,16 +29,22 @@ export interface ParseResult {
   warnings: string[];
 }
 
-/** 흰 바탕인지. 칸의 배경은 옅어도 흰색은 아니다. */
-const isBackdrop = (r: number, g: number, b: number) =>
-  r > 248 && g > 248 && b > 248;
+/**
+ * 아무것도 없는 흰 바탕인지.
+ *
+ * 처음에는 '옅고 채도가 낮으면 글자나 눈금선' 으로 걸렀다. 그랬더니 옅은
+ * 회분홍(#f7f2f2 같은) 수업 칸이 통째로 버려졌다 — 채도로는 옅은 칸과 회색
+ * 선을 가를 수 없다. 실제로 기초확률 한 칸이 그렇게 사라졌다.
+ *
+ * 그래서 흰색만 바탕으로 본다. 눈금선도 글자도 '바탕이 아닌 것' 으로 함께
+ * 걸리지만, 선은 한두 픽셀이라 높이로 걸러지고, 글자는 칸 안에 있으니 같은
+ * 칸으로 이어 붙으면 그만이다.
+ */
+const isPaper = (r: number, g: number, b: number) =>
+  r > 249 && g > 249 && b > 249;
 
-/** 글자나 눈금선인지. 회색 계열이고 어둡다. */
-const isInk = (r: number, g: number, b: number) => {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  return max - min < 6 && max < 250;
-};
+/** 글자인지. 칸 색을 견줄 때 글자 픽셀에 속지 않으려고 쓴다. */
+const isGlyph = (r: number, g: number, b: number) => (r + g + b) / 3 < 170;
 
 /** 두 색이 눈에 띄게 다른지. 맞붙은 칸을 가르는 데 쓴다. */
 const differs = (a: number[], b: number[]) =>
@@ -77,20 +83,24 @@ const runsInColumn = (
   for (let y = 0; y < height; y += 1) {
     const i = (y * width + x) * 4;
     const px = [data[i], data[i + 1], data[i + 2]];
-    const filled =
-      !isBackdrop(px[0], px[1], px[2]) && !isInk(px[0], px[1], px[2]);
 
-    if (!filled) {
+    if (isPaper(px[0], px[1], px[2])) {
       close(y);
       continue;
     }
     if (start < 0) {
       start = y;
+      colour = isGlyph(px[0], px[1], px[2]) ? null : px;
+      continue;
+    }
+    /* 칸 색은 글자가 아닌 자리에서만 잡는다. 글자 위에서 잡으면 늘 어긋난다. */
+    if (isGlyph(px[0], px[1], px[2])) continue;
+    if (!colour) {
       colour = px;
       continue;
     }
     /* 색이 확 바뀌면 다른 수업이 맞붙은 것이다. 사이에 흰 틈이 없을 수 있다. */
-    if (colour && differs(colour, px)) {
+    if (differs(colour, px)) {
       close(y);
       start = y;
       colour = px;
@@ -163,7 +173,7 @@ export const HOUR = 60;
 export const snap = (minutes: number, step = HOUR): number =>
   Math.round(minutes / step) * step;
 
-export { runsInColumn, isBackdrop, isInk };
+export { runsInColumn, isPaper, isGlyph };
 
 /* ── 글자 읽기 ────────────────────────────────────────────────────────── */
 
@@ -334,7 +344,13 @@ export const parseTimetableImage = async (
   }
 
   const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const minHeight = Math.max(8, Math.round(20 / axis.minutesPerPixel / 4));
+  /*
+   * 이보다 낮은 자국은 칸이 아니다.
+   *
+   * 흰색만 바탕으로 보게 되면서 한두 픽셀짜리 눈금선까지 걸리는데, 한 교시의
+   * 삼분의 일도 안 되는 높이는 수업 칸일 수 없다.
+   */
+  const minHeight = Math.max(4, Math.round(HOUR / axis.minutesPerPixel / 3));
 
   const slots: ParsedSlot[] = [];
 
@@ -371,7 +387,25 @@ export const parseTimetableImage = async (
         );
       });
 
-      const roomWord = inside.find((w) => ROOM_LIKE.test(w.text));
+      /*
+       * 칸 안에 강의실처럼 생긴 낱말이 여럿일 수 있다.
+       *
+       * 과목명이나 교수 이름이 뭉개져 `101` 같은 숫자로 읽히면 그게 먼저 걸린다.
+       * 그래서 먼저 온 것을 집지 않고, **캠퍼스에 실제로 있는 건물 번호로
+       * 풀리는 것**을 고른다. 그런 게 여럿이면 아래쪽을 고른다 — 강의실은 칸의
+       * 마지막 줄에 적힌다.
+       */
+      const candidates = inside.filter((w) => ROOM_LIKE.test(w.text));
+      const resolves = (w: Word) => {
+        const no = /^(\d{1,2})-/.exec(repairRoom(w.text, knownBuildings))?.[1];
+        return no !== undefined && knownBuildings.has(Number(no));
+      };
+      const good = candidates.filter(resolves);
+      const pool = good.length > 0 ? good : candidates;
+      const roomWord = pool.reduce<Word | undefined>(
+        (best, w) => (!best || w.bottom > best.bottom ? w : best),
+        undefined,
+      );
 
       /* 첫 줄이 과목 이름이다. 같은 높이의 낱말을 이어 붙인다. */
       const top = inside.length > 0 ? Math.min(...inside.map((w) => w.y)) : 0;
