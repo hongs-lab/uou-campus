@@ -2816,6 +2816,40 @@
       "lat": 35.54718104739154,
       "lng": 129.25575971603396,
       "precision": "surveyed"
+    },
+    {
+      "id": "j-new-2",
+      "kind": "place",
+      "name": "동아리관 I",
+      "lat": 35.54397730146046,
+      "lng": 129.25860822200778,
+      "precision": "surveyed",
+      "no": 13
+    },
+    {
+      "id": "j-new-3",
+      "kind": "junction",
+      "name": "",
+      "lat": 35.543593192538324,
+      "lng": 129.25948530435565,
+      "precision": "surveyed"
+    },
+    {
+      "id": "j-new-4",
+      "kind": "place",
+      "name": "학군단",
+      "lat": 35.54391837577938,
+      "lng": 129.25890862941745,
+      "precision": "surveyed",
+      "no": 21
+    },
+    {
+      "id": "j-new-5",
+      "kind": "place",
+      "name": "동아리관 II",
+      "lat": 35.54385072031435,
+      "lng": 129.2592626810074,
+      "precision": "surveyed"
     }
   ],
   "edges": [
