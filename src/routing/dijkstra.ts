@@ -1,3 +1,4 @@
+import type { NodeKind } from '@/types/campus';
 import type { CampusGraph, Link } from './graph';
 import { costFor, type RouteOptions } from './cost';
 
@@ -50,6 +51,22 @@ export interface Step {
 }
 
 /**
+ * 건물을 **지나쳐 갈 수 있는지**.
+ *
+ * 건물은 가장 가까운 길목에 접속선으로 매달려 있다. 접속선은 실제 출입구가
+ * 아니라 「여기서 저 길로 나갈 수 있다」는 모형이고, 좌표도 건물 **중심**이다.
+ * 그래서 접속선 두 가닥을 이어 붙이면 건물 한복판을 뚫고 지나가는 길이 된다 —
+ * 실제로는 건물을 빙 둘러 가야 하므로 그만큼 짧게 잡힌다.
+ *
+ * 건물 안을 정말로 가로지르는 길은 따로 있다. surface 가 'indoor' 인 간선이고,
+ * 문 닫힌 시간엔 allowIndoor 로 끈다. 그러니 접속선으로는 못 지나가게 막는다.
+ *
+ * 문(gate)은 막지 않는다 — 문은 건물이 아니라 길의 일부다.
+ */
+const canPassThrough = (kind: NodeKind): boolean =>
+  kind !== 'building' && kind !== 'place';
+
+/**
  * from 에서 to 까지 옵션 기준으로 가장 싼 길.
  * 못 가면 null. 간선 비용이 음수가 될 일이 없어 A* 대신 다익스트라로 충분하다.
  */
@@ -73,6 +90,10 @@ export const shortestPath = (
     if (settled.has(id)) continue;
     settled.add(id);
     if (id === to) break;
+
+    /* 출발지가 건물인 것은 당연하고, 남의 건물을 관통해 가는 것만 막는다. */
+    const kind = graph.nodes.get(id)?.kind;
+    if (id !== from && kind && !canPassThrough(kind)) continue;
 
     for (const link of graph.links.get(id) ?? []) {
       if (settled.has(link.to)) continue;
