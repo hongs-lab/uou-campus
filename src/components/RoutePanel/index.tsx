@@ -301,6 +301,13 @@ const RoutePanel = ({
           {/* 설치 단추는 지도 오른쪽 위에 따로 있다 — InstallButton. */}
           <button
             type="button"
+            className={hasTimetable ? s.timetableOn : s.edit}
+            onClick={onOpenTimetable}
+          >
+            시간표
+          </button>
+          <button
+            type="button"
             className={editing ? s.editOn : s.edit}
             onClick={onToggleEdit}
           >
@@ -374,7 +381,6 @@ const RoutePanel = ({
           route={route}
           hasTimetable={hasTimetable}
           now={now}
-          onOpen={onOpenTimetable}
           onGo={onGoToClass}
         />
 

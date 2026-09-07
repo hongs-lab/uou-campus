@@ -20,7 +20,6 @@ interface Props {
   route: Route | null;
   hasTimetable: boolean;
   now: Date;
-  onOpen: () => void;
   onGo: () => void;
 }
 
@@ -37,26 +36,21 @@ const NextClass = ({
   route,
   hasTimetable,
   now,
-  onOpen,
   onGo,
 }: Props) => {
-  if (!hasTimetable) {
-    return (
-      <div className={s.classRow}>
-        <button type="button" className={s.classAdd} onClick={onOpen}>
-          시간표 넣기
-        </button>
-      </div>
-    );
-  }
+  /*
+   * 시간표가 없으면 아무것도 안 그린다.
+   *
+   * 넣으라는 단추를 여기 두었더니 넓은 화면에서 패널을 가로지르는 절취선처럼
+   * 읽혔다. 하루에 한 번 누를 단추가 길찾기 칸 사이를 갈라 놓을 이유가 없어,
+   * 「편집」과 나란히 머리줄로 올렸다.
+   */
+  if (!hasTimetable) return null;
 
   if (!upcoming) {
     return (
       <div className={s.classRow}>
         <span className={s.classNote}>남은 수업이 없습니다</span>
-        <button type="button" className={s.classEdit} onClick={onOpen}>
-          시간표
-        </button>
       </div>
     );
   }
@@ -103,9 +97,6 @@ const NextClass = ({
           길찾기
         </button>
       )}
-      <button type="button" className={s.classEdit} onClick={onOpen}>
-        시간표
-      </button>
     </div>
   );
 };
