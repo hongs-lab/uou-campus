@@ -75,6 +75,60 @@ export const floorOf = (room: string): number => {
   return Number.isFinite(floor) && floor > 0 ? floor : 1;
 };
 
+/**
+ * 호실 번호가 그럴듯한지.
+ *
+ * 되살리기가 후보를 고를 때 쓴다. `615` 는 6층 15호로 읽히지만 `9509` 는 95층이
+ * 되어 버린다. 캠퍼스에 그런 건물은 없다.
+ */
+const TOP_FLOOR = 25;
+
+const looksLikeRoom = (digits: string): boolean => {
+  if (digits.length < 3 || digits.length > 4) return false;
+  if (digits.startsWith('0')) return false;
+  const floor = Number(digits.slice(0, digits.length - 2));
+  return floor >= 1 && floor <= TOP_FLOOR;
+};
+
+/**
+ * 하이픈이 빠져 붙어 버린 코드를 되살린다.
+ *
+ * 그림에서 읽어 올 때 `7-615` 가 `7615` 로 오는 일이 있다. 숫자만 보면 어디서
+ * 끊어야 할지 알 수 없지만, 두 가지를 안다 — 캠퍼스에 있는 건물 번호와, 호실
+ * 번호의 생김새다. `19509` 를 `1-9509` 로 끊으면 95층이 되므로 `19-509` 만
+ * 남는다.
+ *
+ * 후보가 하나로 좁혀질 때만 고친다. 둘 다 그럴듯하면 손대지 않는다 — 잘못
+ * 고쳐 놓고 맞다고 우기는 쪽이 더 나쁘다. 그건 확인 화면에서 사람이 정한다.
+ */
+export const repairRoom = (
+  raw: string,
+  knownBuildings: Set<number>,
+): string => {
+  const room = normalizeRoom(raw);
+  if (room.includes('-')) return room;
+
+  const digits = /^(\d{3,6})$/.exec(room)?.[1];
+  if (!digits) return room;
+
+  const candidates: string[] = [];
+  for (const cut of [1, 2]) {
+    const rest = digits.slice(cut);
+    if (!knownBuildings.has(Number(digits.slice(0, cut)))) continue;
+    if (!looksLikeRoom(rest)) continue;
+    candidates.push(`${Number(digits.slice(0, cut))}-${rest}`);
+  }
+  return candidates.length === 1 ? candidates[0] : room;
+};
+
+/** 그래프가 아는 건물 번호. 위의 되살리기가 쓴다. */
+export const knownBuildingNos = (graph: CampusGraph): Set<number> =>
+  new Set(
+    graph.places
+      .map((p) => p.no)
+      .filter((no): no is number => typeof no === 'number'),
+  );
+
 /** 그 강의실이 있는 건물 노드. 번호가 그래프에 없으면 null. */
 export const placeForRoom = (
   graph: CampusGraph,
