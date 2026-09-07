@@ -56,7 +56,14 @@ const NextClass = ({
   }
 
   const { slot, startsAt } = upcoming;
-  const heading = slot.title || slot.room;
+  /*
+   * 건물 이름을 앞세운다.
+   *
+   * 과목 이름은 시간표에서 안 가져온다 — 인식이 절반쯤밖에 안 맞았고, 걸어가는
+   * 사람에게 필요한 것은 과목명이 아니라 어느 건물이냐다. 건물을 못 찾았을
+   * 때만 강의실 코드를 대신 세운다.
+   */
+  const heading = place ? place.name : slot.room;
 
   /* 도착지가 그 건물로 잡혀 있을 때만 '언제 나가나' 를 말할 수 있다. */
   const aimed = Boolean(place && route && route.to.id === place.id);
@@ -73,7 +80,7 @@ const NextClass = ({
         </span>
         <span className={s.classSub}>
           {clockOf(startsAt)} · {slot.room}
-          {place ? ` · ${place.name}` : ' · 건물을 못 찾음'}
+          {place ? '' : ' · 건물을 못 찾음'}
         </span>
 
         {leave && (

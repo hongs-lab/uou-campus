@@ -209,11 +209,6 @@ export const placeBad = style([
   { flexShrink: 0, color: theme.warn, fontWeight: 700 },
 ]);
 
-export const titleInput = style([
-  field,
-  { flex: 1, minWidth: '140px', fontSize: '13px' },
-]);
-
 export const addRow = style([
   font.caption,
   {

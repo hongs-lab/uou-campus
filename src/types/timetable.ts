@@ -21,9 +21,6 @@ export interface ClassSlot {
    * 울산대는 `건물번호-호실` 이라 여기서 건물을 끌어낼 수 있다. 예: `7-615`.
    */
   room: string;
-  /** 과목 이름. 못 읽었으면 비어 있다 — 길찾기에는 없어도 된다. */
-  title?: string;
-  professor?: string;
 }
 
 export interface Timetable {

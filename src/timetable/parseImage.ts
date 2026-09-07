@@ -5,8 +5,12 @@ import { repairRoom } from './room';
  * 에브리타임에서 내려받은 시간표 그림을 읽는다.
  *
  * 글자를 다 읽으려 들지 않는다. 요일은 칸의 가로 자리, 시각은 세로 자리에
- * 적혀 있어서, 글자로 알아내야 하는 건 강의실 코드 하나뿐이다. 과목 이름은
- * 있으면 얹고 없으면 만다 — 길찾기에는 없어도 된다.
+ * 적혀 있어서, 글자로 알아내야 하는 건 강의실 코드 하나뿐이다.
+ *
+ * 과목 이름은 아예 안 가져온다. 인식이 절반쯤밖에 안 맞아 「창업아이디어설계」가
+ * 「창」으로 들어왔는데, 길찾기에 쓰이지도 않는 값을 그렇게 어설프게 들고 있으면
+ * 화면만 지저분해진다. 큰 언어 데이터(6.6MB)로도 정확도가 그대로여서 — 재 봤다 —
+ * 더 받아서 될 일도 아니었다. 어디로 가느냐는 강의실 하나로 정해진다.
  *
  * 읽은 값은 그대로 쓰지 않는다. 확인 화면에서 사람이 보고 고친 뒤에야 시간표가
  * 된다. 그래서 여기서는 '확실하지 않다' 를 숨기지 않고 같이 넘긴다.
@@ -18,7 +22,6 @@ export interface ParsedSlot {
   endMinutes: number;
   /** 읽어 낸 강의실. 못 읽었으면 빈 문자열 — 확인 화면에서 채운다. */
   room: string;
-  title: string;
   /** 강의실을 얼마나 믿을 수 있는지(0~100). 낮으면 확인 화면에서 먼저 보여 준다. */
   confidence: number;
 }
@@ -407,19 +410,11 @@ export const parseTimetableImage = async (
         undefined,
       );
 
-      /* 첫 줄이 과목 이름이다. 같은 높이의 낱말을 이어 붙인다. */
-      const top = inside.length > 0 ? Math.min(...inside.map((w) => w.y)) : 0;
-      const title = inside
-        .filter((w) => w.y < top + 12 && w !== roomWord)
-        .map((w) => w.text)
-        .join('');
-
       slots.push({
         day: day as Weekday,
         startMinutes,
         endMinutes,
         room: roomWord ? repairRoom(roomWord.text, knownBuildings) : '',
-        title,
         confidence: roomWord ? roomWord.confidence : 0,
       });
     }
