@@ -13,7 +13,13 @@ export const TILE_ATTRIBUTION =
 
 /**
  * 배경으로 깔리는 캠퍼스 보행망.
- * 차도는 뒤로 물리고 보행로·계단을 앞세운다 — 지름길이 눈에 먼저 들어오게.
+ *
+ * 색을 쓰지 않는다. 예전에는 보행로도 지름길도 경로와 같은 초록이었고, 굵기와
+ * 투명도만 달랐다 — 「어느 선을 따라가야 하느냐」가 안 보인다는 말을 들었다.
+ * 지도 타일의 공원도 초록이라 삼중으로 겹쳤다.
+ *
+ * 이제 지도 위에서 초록은 **가야 할 길 하나뿐**이다. 배경은 회색 농담으로만
+ * 말한다 — 차도는 뒤로 물리고, 보행로·계단·지름길은 앞세우되 색은 안 준다.
  */
 export const baseEdgeStyle = (edge: CampusEdge): PathOptions => {
   if (edge.connector) {
@@ -25,28 +31,29 @@ export const baseEdgeStyle = (edge: CampusEdge): PathOptions => {
       interactive: false,
     };
   }
+  /* 아는 사람만 다니는 길. 색 대신 굵기와 진하기로 앞세운다. */
   if (edge.shortcut) {
     return {
-      color: theme.accent,
+      color: theme.gray[700],
       weight: 3.5,
-      opacity: 0.75,
+      opacity: 0.62,
       interactive: false,
     };
   }
   switch (edge.surface) {
     case 'stairs':
       return {
-        color: theme.accent,
+        color: theme.gray[500],
         weight: 3,
-        opacity: 0.6,
+        opacity: 0.55,
         dashArray: '2 4',
         interactive: false,
       };
     case 'indoor':
       return {
-        color: theme.accent,
+        color: theme.gray[500],
         weight: 3,
-        opacity: 0.6,
+        opacity: 0.5,
         dashArray: '1 6',
         interactive: false,
       };
@@ -54,24 +61,29 @@ export const baseEdgeStyle = (edge: CampusEdge): PathOptions => {
       return {
         color: theme.gray[400],
         weight: 1.5,
-        opacity: 0.3,
+        opacity: 0.28,
         interactive: false,
       };
     default:
       return {
-        color: theme.accent,
+        color: theme.gray[500],
         weight: 2.5,
-        opacity: 0.42,
+        opacity: 0.4,
         interactive: false,
       };
   }
 };
 
-/** 고른 경로. 굵은 선 밑에 흰 테를 한 겹 깔아 배경과 떼어 놓는다. */
+/**
+ * 고른 경로. 지도 위에서 초록은 이것뿐이다.
+ *
+ * 흰 테를 한 겹 깔아 배경과 떼어 놓는다. 공원처럼 옅은 초록이 깔린 자리를 지날
+ * 때, 이 테가 없으면 선이 바닥에 잠긴다.
+ */
 export const routeCasingStyle: PathOptions = {
   color: theme.gray[0],
-  weight: 10,
-  opacity: 0.9,
+  weight: 12,
+  opacity: 0.95,
   lineCap: 'round',
   lineJoin: 'round',
   interactive: false,
@@ -79,7 +91,7 @@ export const routeCasingStyle: PathOptions = {
 
 export const routeStyle: PathOptions = {
   color: theme.accent,
-  weight: 5,
+  weight: 6,
   opacity: 1,
   lineCap: 'round',
   lineJoin: 'round',
