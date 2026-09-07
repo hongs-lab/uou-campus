@@ -656,3 +656,110 @@ export const stepMeters = style([
   font.caption,
   { color: theme.textTertiary, fontVariantNumeric: 'tabular-nums' },
 ]);
+
+/* ── 다음 수업 ──────────────────────────────────────────────────────────── */
+
+const classRowBase = style([
+  flex.VERTICAL,
+  {
+    gap: spacing.sm,
+    padding: `10px ${spacing.md} 12px`,
+    borderBottom: `1px solid ${theme.outline}`,
+  },
+]);
+
+export const classRow = style([classRowBase]);
+
+/** 이미 나섰어야 하는 시각이 지났다. 색으로 먼저 말한다. */
+export const classRowLate = style([
+  classRowBase,
+  { backgroundColor: theme.warnSoft },
+]);
+
+export const classText = style([
+  flex.COLUMN_FLEX,
+  { flex: 1, minWidth: 0, gap: '3px' },
+]);
+
+export const classHead = style([flex.VERTICAL, { gap: '7px', minWidth: 0 }]);
+
+export const classWhen = style([
+  font.caption,
+  {
+    flexShrink: 0,
+    padding: '2px 8px',
+    borderRadius: layout.radius.pill,
+    backgroundColor: theme.accent,
+    color: theme.onAccent,
+    fontWeight: 700,
+  },
+]);
+
+export const classTitle = style([
+  font.bodyStrong,
+  {
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    color: theme.textPrimary,
+  },
+]);
+
+export const classSub = style([font.caption, { color: theme.textSecondary }]);
+
+export const classLeave = style([
+  font.caption,
+  { color: theme.ok, fontWeight: 700 },
+]);
+
+export const classLeaveLate = style([
+  font.caption,
+  { color: theme.warn, fontWeight: 700 },
+]);
+
+/** 셈한 근거. 작게 붙여 둔다 — 안 맞다 싶을 때 어디가 틀렸는지 보이게. */
+export const classBreak = style({ fontWeight: 400, opacity: 0.8 });
+
+export const classNote = style([
+  font.caption,
+  { flex: 1, color: theme.textTertiary },
+]);
+
+export const classAdd = style([
+  font.caption,
+  {
+    flex: 1,
+    minHeight: '38px',
+    padding: '8px 12px',
+    borderRadius: layout.radius.sm,
+    border: `1px dashed ${theme.outline}`,
+    color: theme.textSecondary,
+    ':hover': { borderColor: theme.accent, color: theme.accent },
+  },
+]);
+
+export const classGo = style([
+  font.caption,
+  {
+    flexShrink: 0,
+    padding: '7px 13px',
+    borderRadius: layout.radius.pill,
+    backgroundColor: theme.accent,
+    color: theme.onAccent,
+    fontWeight: 700,
+    ':hover': { opacity: 0.9 },
+  },
+]);
+
+export const classEdit = style([
+  font.caption,
+  {
+    flexShrink: 0,
+    padding: '6px 10px',
+    borderRadius: layout.radius.pill,
+    border: `1px solid ${theme.outline}`,
+    color: theme.textTertiary,
+    ':hover': { color: theme.textPrimary, borderColor: theme.gray[300] },
+  },
+]);

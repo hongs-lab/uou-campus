@@ -14,12 +14,17 @@ import { useLandscape, usePhone } from '@/hooks/useMediaQuery';
 import { ARRIVED_METERS, trackProgress } from '@/routing/progress';
 import { landmarkNear, toDirections } from '@/routing/directions';
 import { useInstall } from '@/hooks/useInstall';
+import { useTimetable } from '@/hooks/useTimetable';
+import { useNow } from '@/hooks/useNow';
+import { nextClass } from '@/timetable/schedule';
+import { placeForRoom } from '@/timetable/room';
 import { track } from '@/analytics/gtag';
 import CampusMap from '@/components/Map';
 import RoutePanel, { type SheetState } from '@/components/RoutePanel';
 import EditorPanel from '@/components/EditorPanel';
 import PlacePicker, { type Field } from '@/components/PlacePicker';
 import TopBar from '@/components/TopBar';
+import TimetableSheet from '@/components/TimetableSheet';
 import InstallButton from '@/components/InstallButton';
 import * as s from './App.css';
 
@@ -93,6 +98,8 @@ const App = () => {
   const [picking, setPicking] = useState<Field | null>(null);
   /** 실시간으로 따라가는 중인지. */
   const [guiding, setGuiding] = useState(false);
+  /** 시간표를 넣고 고치는 전체 화면. */
+  const [timetableOpen, setTimetableOpen] = useState(false);
 
   /**
    * 다음에 잡히는 첫 좌표를 출발지로 삼을지.
@@ -117,6 +124,35 @@ const App = () => {
       if (near) setFromId(near.node.id);
     },
   });
+
+  /* ── 시간표 ──────────────────────────────────────────────────────────── */
+
+  const timetable = useTimetable();
+  /*
+   * '다음 수업까지 30분' 은 가만 두면 거짓말이 된다. 시간표가 있을 때만 시계를
+   * 돌린다 — 없으면 30초마다 다시 그릴 이유가 없다.
+   */
+  const now = useNow(timetable.has ? 30_000 : 600_000);
+
+  const upcoming = useMemo(
+    () => (timetable.has ? nextClass(timetable.slots, now) : null),
+    [timetable.has, timetable.slots, now],
+  );
+
+  const upcomingPlace = useMemo(
+    () => (upcoming ? placeForRoom(graph, upcoming.slot.room) : null),
+    [graph, upcoming],
+  );
+
+  /** 다음 수업 건물을 도착지로 세운다. 출발지는 사람이 고른 것을 지킨다. */
+  const goToClass = useCallback(() => {
+    if (!upcomingPlace) return;
+    setToId(upcomingPlace.id);
+    track('timetable_route', {
+      to: upcomingPlace.name,
+      room: upcoming?.slot.room,
+    });
+  }, [upcoming, upcomingPlace]);
 
   /* ── 경로 ────────────────────────────────────────────────────────────── */
 
@@ -509,7 +545,23 @@ const App = () => {
         onOpenPicker={setPicker}
         onStartGuide={startGuide}
         onStopGuide={stopGuide}
+        upcoming={upcoming}
+        upcomingPlace={upcomingPlace}
+        hasTimetable={timetable.has}
+        now={now}
+        onOpenTimetable={() => setTimetableOpen(true)}
+        onGoToClass={goToClass}
       />
+
+      {timetableOpen && (
+        <TimetableSheet
+          graph={graph}
+          slots={timetable.slots}
+          onSave={timetable.replace}
+          onClear={timetable.clear}
+          onClose={() => setTimetableOpen(false)}
+        />
+      )}
 
       {handheld && picker && (
         <PlacePicker
