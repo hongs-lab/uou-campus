@@ -2849,7 +2849,8 @@
       "name": "동아리관 II",
       "lat": 35.54385072031435,
       "lng": 129.2592626810074,
-      "precision": "surveyed"
+      "precision": "surveyed",
+      "no": 31
     }
   ],
   "edges": [
