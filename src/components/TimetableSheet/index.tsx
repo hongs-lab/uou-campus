@@ -89,7 +89,6 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
               startMinutes: x.startMinutes,
               endMinutes: x.endMinutes,
               room: x.room,
-              title: x.title || undefined,
             })),
           ),
         );
@@ -275,15 +274,6 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
                   <span className={place ? s.place : s.placeBad}>
                     {place ? place.name : '건물을 못 찾음'}
                   </span>
-                  <input
-                    className={s.titleInput}
-                    value={slot.title ?? ''}
-                    placeholder="과목 이름 (없어도 됩니다)"
-                    aria-label="과목 이름"
-                    onChange={(e) =>
-                      patch(slot.id, { title: e.target.value || undefined })
-                    }
-                  />
                 </div>
               </li>
             );

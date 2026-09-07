@@ -288,12 +288,23 @@ export const body = style([
 export const header = style([
   flex.BETWEEN,
   {
+    gap: '6px',
     padding: `12px ${spacing.md}`,
     borderBottom: `1px solid ${theme.outline}`,
   },
 ]);
 
-export const title = style([font.appTitle, { fontSize: '17px' }]);
+export const title = style([
+  font.appTitle,
+  {
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontSize: '17px',
+  },
+]);
 
 export const edit = style([
   font.caption,
@@ -726,19 +737,6 @@ export const classNote = style([
   { flex: 1, color: theme.textTertiary },
 ]);
 
-export const classAdd = style([
-  font.caption,
-  {
-    flex: 1,
-    minHeight: '38px',
-    padding: '8px 12px',
-    borderRadius: layout.radius.sm,
-    border: `1px dashed ${theme.outline}`,
-    color: theme.textSecondary,
-    ':hover': { borderColor: theme.accent, color: theme.accent },
-  },
-]);
-
 export const classGo = style([
   font.caption,
   {
@@ -752,14 +750,13 @@ export const classGo = style([
   },
 ]);
 
-export const classEdit = style([
-  font.caption,
+/** 시간표를 들고 있을 때. 「편집」과 같은 꼴이되 켜져 있다는 것만 알려 준다. */
+export const timetableOn = style([
+  edit,
   {
-    flexShrink: 0,
-    padding: '6px 10px',
-    borderRadius: layout.radius.pill,
-    border: `1px solid ${theme.outline}`,
-    color: theme.textTertiary,
-    ':hover': { color: theme.textPrimary, borderColor: theme.gray[300] },
+    borderColor: theme.accent,
+    backgroundColor: theme.accentSoft,
+    color: theme.accent,
+    ':hover': { color: theme.accent, borderColor: theme.accent },
   },
 ]);
