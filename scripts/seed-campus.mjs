@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { mendGraph } from './mend-graph.mjs';
+import { mendGraph, mendSpurs } from './mend-graph.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = resolve(HERE, 'osm-campus.json');
@@ -499,6 +499,13 @@ for (const building of buildings) {
   matched.push(osmName);
 }
 
+/* ── 5.5 코앞인데 한참 도는 건물에 한 가닥 더 ───────────────────────────
+ * 건물은 가장 가까운 길목 하나에만 매달린다. 그 하나가 건물 반대편에 붙으면
+ * 코앞의 길을 두고 블록을 통째로 돈다. 자세한 규칙은 scripts/mend-graph.mjs.
+ */
+
+const spurs = mendSpurs({ nodes, edges });
+
 /* ── 6. 출입구는 이름만 얹는다 ──────────────────────────────────────────── */
 
 const gates = [];
@@ -708,6 +715,7 @@ console.log(
           .join(' · ')})`
       : ''),
 );
+console.log(`  코앞인데 돌던 건물에 더 맨 가닥 ${spurs.length}개`);
 console.log(`  지름길 간선 ${keptEdges.filter((e) => e.shortcut).length}개`);
 for (const line of corridorReport) console.log(`    ${line}`);
 if (nodes.length !== keptNodes.length) {

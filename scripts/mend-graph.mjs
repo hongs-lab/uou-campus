@@ -367,6 +367,87 @@ export const mendGraph = (doc, overrides = {}) => {
   return done;
 };
 
+/* ── 건물을 한 가닥 더 매달기 ───────────────────────────────────────────── */
+
+export const SPUR_DEFAULTS = {
+  /** 건물에서 이 거리 안에 있는 길목만 본다(m). */
+  reach: 60,
+  /** 곧장 가면 이만큼 배 이상 돌아야 매단다. */
+  ratio: 3,
+  /** 그리고 돌아가는 길이 이만큼은 줄어야 한다(m). */
+  gain: 50,
+  rounds: 200,
+};
+
+/**
+ * 건물은 가장 가까운 길목 하나에만 매달려 있다. 그 하나가 건물 **반대편**에
+ * 붙으면, 코앞의 길을 두고 블록을 통째로 돌아야 한다.
+ *
+ * 기초과학실험동이 그랬다. 북쪽 n148 이 34m, 남쪽 n77 이 36m 로 2m 차이인데
+ * 가까운 쪽만 잡혔다. 그래서 조형관까지 곧장 119m 를 430m 로 갔다 — 남쪽으로
+ * 한 가닥만 더 있으면 계단을 타고 바로 내려가는 길이다.
+ *
+ * 그래서 **곧장 가면 코앞인데 그래프로는 한참 도는 길목**에 한 가닥을 더 맨다.
+ * 시드가 이미 쓰는 접속선과 같은 것이다 — 건물 중심에서 곧게 이은 모형이고,
+ * 실제 출입구가 아니다.
+ */
+export const mendSpurs = (doc, overrides = {}) => {
+  const options = { ...SPUR_DEFAULTS, ...overrides };
+  const taken = new Set(doc.edges.map((edge) => edge.id));
+  let seq = 0;
+  const freshId = () => {
+    let id;
+    do {
+      seq += 1;
+      id = `s${seq}`;
+    } while (taken.has(id));
+    taken.add(id);
+    return id;
+  };
+
+  const done = [];
+
+  for (let round = 0; round < options.rounds; round += 1) {
+    const { links } = indexOf(doc);
+    let best = null;
+
+    for (const place of doc.nodes) {
+      if (place.kind === 'junction') continue;
+      const reach = reachFrom(place.id, links);
+
+      for (const node of doc.nodes) {
+        if (node.kind !== 'junction') continue;
+        const straight = metersBetween(place, node);
+        if (straight > options.reach) continue;
+
+        const around = reach.get(node.id) ?? Infinity;
+        if (around < straight * options.ratio) continue;
+        if (around - straight < options.gain) continue;
+        if (!best || around - straight > best.saved) {
+          best = { place, node, straight, saved: around - straight };
+        }
+      }
+    }
+
+    if (!best) break;
+
+    doc.edges.push({
+      id: freshId(),
+      from: best.place.id,
+      to: best.node.id,
+      surface: 'path',
+      shortcut: false,
+      covered: false,
+      connector: true,
+      source: 'assumed',
+      note: `건물 중심에서 ${Math.round(best.straight)}m 를 곧게 이었다. 이 길목까지 돌아가던 ${Math.round(best.saved + best.straight)}m 를 덜어낸다.`,
+    });
+    done.push(best);
+  }
+
+  return done;
+};
+
 /** 아직 허공에서 끝나는 곳. 고치고 난 뒤 무엇이 남았는지 보려고. */
 export const deadEnds = (doc) => {
   const { links } = indexOf(doc);
@@ -420,6 +501,7 @@ if (isMain) {
   const stairsBefore = doc.edges.filter((e) => e.surface === 'stairs').length;
 
   const done = mendGraph(doc);
+  const spurs = mendSpurs(doc);
 
   const bySurface = {};
   for (const item of done)
@@ -444,6 +526,17 @@ if (isMain) {
       ` · 계단 ${stairsBefore}개 → ${doc.edges.filter((e) => e.surface === 'stairs').length}개`,
   );
   console.log(`  노드 ${doc.nodes.length}개 · 간선 ${doc.edges.length}개`);
+
+  if (spurs.length) {
+    console.log(`\n건물에 가닥을 ${spurs.length}개 더 맸습니다.`);
+    for (const spur of spurs) {
+      console.log(
+        `  ${spur.place.name} → ${spur.node.id}` +
+          ` — 곧장 ${Math.round(spur.straight)}m 인데` +
+          ` ${Math.round(spur.saved + spur.straight)}m 를 돌고 있었다`,
+      );
+    }
+  }
 
   const loose = looseStairs(doc);
   if (loose.length) {
