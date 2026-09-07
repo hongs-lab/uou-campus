@@ -304,7 +304,13 @@ const RoutePanel = ({
             className={hasTimetable ? s.timetableOn : s.edit}
             onClick={onOpenTimetable}
           >
-            시간표
+            {/*
+              세로로 든 폰에서는 「시간표 넣기」로 길게 쓴다. 폭이 남기도 하고,
+              처음 보는 사람에게 「시간표」 두 글자는 무엇을 하는 단추인지
+              알려 주지 않는다. 옆으로 세운 기둥과 넓은 화면 패널은 자리가
+              빠듯해 짧은 쪽을 쓴다.
+            */}
+            {phone ? '시간표 넣기' : '시간표'}
           </button>
           <button
             type="button"
