@@ -670,12 +670,17 @@ export const stepMeters = style([
 
 /* ── 다음 수업 ──────────────────────────────────────────────────────────── */
 
+/**
+ * 다음 수업 줄.
+ *
+ * 밑줄을 긋지 않는다. 위아래 칸도 안 긋는데 여기만 그으면 없는 구획이 생기고,
+ * 넓은 화면에서는 패널을 가로지르는 선으로 읽힌다. 자리는 여백으로만 뗀다.
+ */
 const classRowBase = style([
   flex.VERTICAL,
   {
     gap: spacing.sm,
     padding: `10px ${spacing.md} 12px`,
-    borderBottom: `1px solid ${theme.outline}`,
   },
 ]);
 
