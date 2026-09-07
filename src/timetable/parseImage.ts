@@ -337,7 +337,6 @@ export const parseTimetableImage = async (
   const minHeight = Math.max(8, Math.round(20 / axis.minutesPerPixel / 4));
 
   const slots: ParsedSlot[] = [];
-  let roomless = 0;
 
   for (let day = 0; day < 5; day += 1) {
     const centre = Math.round(columns[day]);
@@ -373,7 +372,6 @@ export const parseTimetableImage = async (
       });
 
       const roomWord = inside.find((w) => ROOM_LIKE.test(w.text));
-      if (!roomWord) roomless += 1;
 
       /* 첫 줄이 과목 이름이다. 같은 높이의 낱말을 이어 붙인다. */
       const top = inside.length > 0 ? Math.min(...inside.map((w) => w.y)) : 0;
@@ -393,12 +391,17 @@ export const parseTimetableImage = async (
     }
   }
 
+  /*
+   * 못 읽은 칸이 몇인지는 여기서 말하지 않는다.
+   *
+   * 확인 화면이 지금 값을 보고 세고 있어서, 사람이 고친 뒤에도 여기서 만든 말이
+   * 남아 있으면 '고쳤는데 아직 못 읽었다' 는 거짓말이 된다. 그 몫은 화면에
+   * 맡기고, 여기서는 그림 자체가 잘못됐을 때만 말한다.
+   */
   if (slots.length === 0)
     warnings.push(
       '수업 칸을 하나도 못 찾았습니다. 잘리지 않은 시간표 그림인지 확인해 주세요.',
     );
-  else if (roomless > 0)
-    warnings.push(`${roomless}칸은 강의실을 못 읽었습니다. 직접 넣어 주세요.`);
 
   return { slots, warnings };
 };

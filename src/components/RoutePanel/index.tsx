@@ -13,6 +13,8 @@ import type { RouteProgress } from '@/routing/progress';
 import { stepAt } from '@/routing/progress';
 import type { DirectionStep } from '@/routing/directions';
 import { formatDuration, formatMeters } from '@/utils/format';
+import type { Upcoming } from '@/timetable/schedule';
+import NextClass from './NextClass';
 import Progress from './Progress';
 import Summary from './Summary';
 import Directions from './Directions';
@@ -70,6 +72,16 @@ interface Props {
   onOpenPicker: (field: Field) => void;
   onStartGuide: () => void;
   onStopGuide: () => void;
+  /* ── 시간표 ─────────────────────────────────────────────────────────── */
+  /** 아직 시작 안 한 가장 이른 수업. 시간표가 없거나 남은 수업이 없으면 null. */
+  upcoming: Upcoming | null;
+  /** 그 수업이 열리는 건물. 강의실 번호가 그래프에 없으면 null. */
+  upcomingPlace: CampusNode | null;
+  hasTimetable: boolean;
+  /** 지금 시각. 스스로 갱신되는 값을 받아 '몇 분 뒤' 가 늙지 않게 한다. */
+  now: Date;
+  onOpenTimetable: () => void;
+  onGoToClass: () => void;
 }
 
 const GEO_MESSAGE: Record<string, string> = {
@@ -113,6 +125,12 @@ const RoutePanel = ({
   onOpenPicker,
   onStartGuide,
   onStopGuide,
+  upcoming,
+  upcomingPlace,
+  hasTimetable,
+  now,
+  onOpenTimetable,
+  onGoToClass,
 }: Props) => {
   const handleRef = useRef<HTMLDivElement>(null);
   const drag = useRef<number | null>(null);
@@ -349,6 +367,16 @@ const RoutePanel = ({
             />
           </div>
         )}
+
+        <NextClass
+          upcoming={upcoming}
+          place={upcomingPlace}
+          route={route}
+          hasTimetable={hasTimetable}
+          now={now}
+          onOpen={onOpenTimetable}
+          onGo={onGoToClass}
+        />
 
         <div className={s.geoRow}>
           <button
