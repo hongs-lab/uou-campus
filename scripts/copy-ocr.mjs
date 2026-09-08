@@ -12,9 +12,17 @@
  * 둘은 남의 CDN 에 매인다는 것. 이 앱은 캠퍼스 안에서 신호가 죽어도 돌라고
  * 만든 것이라, 첫 화면 밖의 기능이라도 남의 도메인에 걸어 둘 이유가 없다.
  *
- * 한국어 하나만 싣는다. 영어까지 실으면 13MB 가 더 붙는데, 재 보니 한국어만으로
- * 요일·시각·강의실이 다 읽힌다 — 하이픈이 자주 빠지지만 그건 `timetable/room.ts`
- * 의 되살리기가 잡는다(12/12 확인).
+ * 한국어를 먼저 쓰고, 영어는 막힌 칸에서만 쓴다.
+ *
+ * 한동안 한국어 하나만 실었다. 기본 테마에서는 그것으로 요일·시각·강의실이 다
+ * 읽혔기 때문이다. 그런데 손글씨 테마로 재 보니 한국어 모델이 숫자의 앞자리를
+ * 곧잘 흘렸다 — 하필 그 앞자리가 건물 번호다. 손글씨 11종에서 82% 였다.
+ *
+ * 영어 모델은 그 자리를 더 잘 읽지만 통째로 바꿀 수는 없다. 두 모델은 서로 다른
+ * 글꼴에서 무너져서, 합치면 어떤 글꼴은 되레 나빠졌다. 그래서 한국어로 먼저 읽고
+ * 캠퍼스 건물로 안 풀릴 때만 영어로 되읽는다 — 89%, 뒷걸음질한 글꼴 없음.
+ *
+ * 영어 것은 여기 놓이기만 하고, 실제로 막힌 칸이 나온 사람만 그때 받아 간다.
  */
 
 import { copyFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
@@ -47,6 +55,14 @@ const FILES = [
   [
     '@tesseract.js-data/kor/4.0.0_best_int/kor.traineddata.gz',
     'kor.traineddata.gz',
+  ],
+  /*
+   * 영어는 막힌 칸에서만 쓴다. 여기 놓아 두기만 하고, 브라우저는 필요할 때
+   * 비로소 받아 간다 — `timetable/parseImage.ts` 의 두 번째 인식기를 보라.
+   */
+  [
+    '@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz',
+    'eng.traineddata.gz',
   ],
   ...VARIANTS.map((v) => [
     `tesseract.js-core/tesseract-core-${v}.wasm.js`,
