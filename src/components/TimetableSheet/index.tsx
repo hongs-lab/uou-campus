@@ -117,19 +117,6 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
     >
       <header className={s.head}>
         <h2 className={s.title}>시간표</h2>
-        {draft.length > 0 && (
-          <button
-            type="button"
-            className={s.textButton}
-            onClick={() => {
-              onClear();
-              setDraft([]);
-              setWarnings([]);
-            }}
-          >
-            지우기
-          </button>
-        )}
         <button
           type="button"
           className={s.close}
@@ -156,20 +143,21 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
 
         <button
           type="button"
-          className={s.upload}
+          className={draft.length > 0 ? s.upload.weak : s.upload.strong}
           disabled={status.kind === 'reading'}
           onClick={() => fileRef.current?.click()}
         >
           {status.kind === 'reading'
             ? status.note
             : draft.length > 0
-              ? '다른 그림으로 다시 읽기'
-              : '에브리타임 시간표 그림 올리기'}
+              ? '다른 이미지로 다시 읽기'
+              : '시간표 이미지 첨부하기'}
         </button>
 
         <p className={s.hint}>
-          에브리타임에서 «시간표 → 이미지 저장» 으로 받은 그림을 올리세요.
-          그림은 이 브라우저 안에서만 읽습니다 — 어디로도 올라가지 않습니다.
+          에브리타임에서{' '}
+          <b className={s.path}>시간표 → 설정 아이콘 → 이미지 저장</b>
+          으로 받은 이미지를 첨부해주세요.
         </p>
 
         {status.kind === 'failed' && <p className={s.warn}>{status.note}</p>}
@@ -180,15 +168,34 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
         ))}
         {unresolved > 0 && (
           <p className={s.warn}>
-            {unresolved}칸은 강의실을 캠퍼스 건물과 못 맞췄습니다 — 붉은
-            칸입니다.「건물번호-호실」 로 고쳐 주세요.
+            {unresolved}칸은 강의실을 캠퍼스 건물과 못 맞췄습니다 — 아래 붉은
+            칸을 「건물번호-호실」 로 고쳐 주세요.
           </p>
         )}
 
         {draft.length === 0 && status.kind !== 'reading' && (
           <p className={s.empty}>
-            아직 시간표가 없습니다. 그림을 올리거나 아래에서 직접 넣으세요.
+            아직 시간표가 없습니다.
+            <br />
+            이미지를 첨부하거나 아래에서 직접 넣으세요.
           </p>
+        )}
+
+        {draft.length > 0 && (
+          <div className={s.listHead}>
+            <span className={s.listCount}>{draft.length}칸</span>
+            <button
+              type="button"
+              className={s.textButton}
+              onClick={() => {
+                onClear();
+                setDraft([]);
+                setWarnings([]);
+              }}
+            >
+              모두 지우기
+            </button>
+          </div>
         )}
 
         <ul className={s.rows}>
@@ -272,7 +279,13 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
                     }
                   />
                   <span className={place ? s.place : s.placeBad}>
-                    {place ? place.name : '건물을 못 찾음'}
+                    {place
+                      ? place.name
+                      : /* 빈 칸과 못 찾은 칸은 할 일이 다르다. 채우라는 말과
+                           고치라는 말을 한 마디로 뭉뚱그리지 않는다. */
+                        slot.room.trim()
+                        ? '건물을 못 찾음'
+                        : '강의실을 넣어 주세요'}
                   </span>
                 </div>
               </li>
@@ -292,7 +305,10 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
         <button
           type="button"
           className={s.save}
-          disabled={status.kind === 'reading'}
+          /* 저장할 것이 없으면 물러선다. 채운 단추가 둘이면 어느 쪽이 다음
+             걸음인지 알려 주는 힘을 서로 깎아먹는다 — 표가 비었을 때의 다음
+             걸음은 첨부지 저장이 아니다. */
+          disabled={status.kind === 'reading' || draft.length === 0}
           onClick={() => {
             onSave(inOrder(draft.filter((x) => x.room.trim())));
             onClose();
