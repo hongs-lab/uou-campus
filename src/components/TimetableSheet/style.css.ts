@@ -180,10 +180,15 @@ export const blank = style([
   },
 ]);
 
-/** 시간표 모양 그림. 무엇을 가져오면 되는지 글보다 빨리 말한다. */
+/**
+ * 울리니가 서는 자리.
+ *
+ * 높이만 정하고 너비는 그림에 맡긴다 — 비례를 건드리지 않는다는 뜻이다.
+ * 대학 CI 규정이기도 하고, 눌리거나 늘어난 마스코트는 그것대로 흉하다.
+ */
 export const glyph = style({
-  width: '84px',
-  height: '64px',
+  height: '112px',
+  width: 'auto',
   flexShrink: 0,
 });
 

@@ -8,6 +8,7 @@ import {
   placeForRoom,
 } from '@/timetable/room';
 import { formatClock } from '@/timetable/schedule';
+import ulrinee from './ulrinee-campus-tour.webp';
 import * as s from './style.css';
 
 interface Props {
@@ -32,44 +33,23 @@ const inOrder = (list: ClassSlot[]) =>
   [...list].sort((a, b) => a.day - b.day || a.startMinutes - b.startMinutes);
 
 /**
- * 무엇을 가져오면 되는지 글보다 먼저 말하는 그림.
+ * 울산대 마스코트 울리니. 지도를 펴 들고 갈 길을 보고 있다.
  *
- * 요일 다섯 줄에 수업 칸 몇을 얹은, 시간표 그 자체다. 무슨 파일이든 받는 빈
- * 네모를 놓아 두는 것보다 이쪽이 정확하다 — 사진첩에서 어느 그림을 찾아야
- * 하는지가 한눈에 보인다.
+ * 빈 화면에 학교 것을 하나 놓기로 했다. 후보로 CI 시그니처가 먼저 나왔지만
+ * 그건 대학을 공식적으로 표기하는 마크라 머리글이나 공식 매체의 자리다.
+ * 창 한가운데 삽화로 앉히면 「무엇을 첨부하라」는 말은 한 마디도 못 하면서
+ * 마크만 닳는다. 빈 화면은 본래 캐릭터의 자리다.
+ *
+ * 여러 그림 가운데 지도를 든 것을 골랐다. 이 앱이 하는 일 그 자체이고,
+ * 캐릭터 색이 강조색(울산대 CI 그린)과 같은 계열이라 화면에 겉돌지 않는다.
+ *
+ * 크기만 비례 그대로 줄여 쓴다. 형태·비례를 손대는 것은 대학 CI 규정이
+ * 금하고 있고, 손댈 이유도 없다. 출처와 이용 조건은 README 에 적어 두었다.
  */
-const TimetableGlyph = () => (
-  <svg className={s.glyph} viewBox="0 0 84 64" aria-hidden="true">
-    <rect
-      x="0.5"
-      y="0.5"
-      width="83"
-      height="63"
-      rx="6"
-      fill="#fff"
-      stroke="#E5E7EB"
-    />
-    <path d="M0.5 13h83" stroke="#E5E7EB" fill="none" />
-    {[17, 33, 50, 67].map((x) => (
-      <path key={x} d={`M${x} 13v51`} stroke="#F3F4F6" fill="none" />
-    ))}
-    <g fill="#16A152">
-      <rect x="3" y="17" width="11" height="18" rx="2" opacity="0.85" />
-      <rect x="20" y="27" width="11" height="14" rx="2" opacity="0.45" />
-      <rect x="36" y="17" width="11" height="11" rx="2" opacity="0.6" />
-      <rect x="53" y="34" width="11" height="20" rx="2" opacity="0.3" />
-      <rect x="70" y="21" width="11" height="15" rx="2" opacity="0.55" />
-    </g>
-  </svg>
+const Ulrinee = () => (
+  <img className={s.glyph} src={ulrinee} alt="" aria-hidden="true" />
 );
 
-/**
- * 시간표를 올리고, 읽은 결과를 확인하는 화면.
- *
- * 그림에서 읽은 값을 곧바로 쓰지 않는다. 글자 인식은 틀린다 — 틀린 강의실로
- * 엉뚱한 건물을 안내하는 것보다, 한 번 보여 주고 고치게 하는 편이 낫다.
- * 못 읽은 칸은 붉게 세워 먼저 눈에 띄게 한다.
- */
 const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
   const [draft, setDraft] = useState<ClassSlot[]>(() => inOrder(slots));
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
@@ -179,7 +159,7 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
         */}
         {draft.length === 0 ? (
           <div className={s.blank}>
-            <TimetableGlyph />
+            <Ulrinee />
             <p className={s.blankTitle}>
               {status.kind === 'reading' ? status.note : '시간표 이미지 첨부'}
             </p>
