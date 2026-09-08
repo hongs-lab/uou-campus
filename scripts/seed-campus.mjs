@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { mendGraph, mendSpurs } from './mend-graph.mjs';
+import { mendGraph, mendSpurs, mendStairSpurs } from './mend-graph.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = resolve(HERE, 'osm-campus.json');
@@ -506,6 +506,14 @@ for (const building of buildings) {
 
 const spurs = mendSpurs({ nodes, edges });
 
+/* ── 5.6 계단 어귀에 건물 매달기 ────────────────────────────────────────
+ * 앞 단계의 문턱은 계단에게 너무 높다. 계단은 짧고 어귀는 건물에서 30~50m 쯤
+ * 떨어져 있어, 「세 배 이상 돌고 50m 넘게 줄어야」 를 자주 못 넘는다. 그래서
+ * 계단 어귀만 더 낮은 문턱으로 한 번 더 훑는다. 규칙은 scripts/mend-graph.mjs.
+ */
+
+const stairSpurs = mendStairSpurs({ nodes, edges });
+
 /* ── 6. 출입구는 이름만 얹는다 ──────────────────────────────────────────── */
 
 const gates = [];
@@ -716,6 +724,7 @@ console.log(
       : ''),
 );
 console.log(`  코앞인데 돌던 건물에 더 맨 가닥 ${spurs.length}개`);
+console.log(`  계단 어귀에 맨 가닥 ${stairSpurs.done.length}개`);
 console.log(`  지름길 간선 ${keptEdges.filter((e) => e.shortcut).length}개`);
 for (const line of corridorReport) console.log(`    ${line}`);
 if (nodes.length !== keptNodes.length) {
