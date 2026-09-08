@@ -152,7 +152,7 @@ export const chevron = style([
     flexShrink: 0,
     width: '32px',
     height: '32px',
-    borderRadius: '50%',
+    borderRadius: layout.radius.circle,
     fontSize: '11px',
     color: theme.textTertiary,
 
@@ -608,7 +608,7 @@ export const stepRail = style({
     left: '6px',
     width: '6px',
     height: '6px',
-    borderRadius: '50%',
+    borderRadius: layout.radius.circle,
     backgroundColor: theme.accent,
   },
   '::after': {
@@ -634,7 +634,7 @@ export const stepRailEnd = style({
     left: '3px',
     width: '12px',
     height: '12px',
-    borderRadius: '50%',
+    borderRadius: layout.radius.circle,
     border: `3px solid ${theme.gray[900]}`,
   },
 });

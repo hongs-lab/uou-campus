@@ -158,7 +158,7 @@ export const meta = style([
 
 export const code = style({
   padding: '1px 4px',
-  borderRadius: '3px',
+  borderRadius: layout.radius.xs,
   backgroundColor: theme.gray[100],
   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
   fontSize: '11px',
