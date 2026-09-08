@@ -49,6 +49,11 @@ const isPaper = (r: number, g: number, b: number) =>
 /** 글자인지. 칸 색을 견줄 때 글자 픽셀에 속지 않으려고 쓴다. */
 const isGlyph = (r: number, g: number, b: number) => (r + g + b) / 3 < 170;
 
+const median = (values: number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+};
+
 /** 두 색이 눈에 띄게 다른지. 맞붙은 칸을 가르는 데 쓴다. */
 const differs = (a: number[], b: number[]) =>
   Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) > 24;
@@ -61,17 +66,45 @@ interface Run {
 /**
  * 한 요일 칸을 위에서 아래로 훑어 색이 칠해진 구간을 찾는다.
  *
- * 칸 하나하나를 도형으로 찾아내는 대신, 칸 가운데를 지나는 세로줄 하나만 본다.
- * 에브리타임의 수업 칸은 요일 칸 폭을 꽉 채우므로 이 한 줄이면 위아래 끝을
- * 정확히 알 수 있다. 훨씬 싸고, 모서리가 둥글거나 테두리가 있어도 안 흔들린다.
+ * 칸 하나하나를 도형으로 찾아내는 대신 가로로 훑는다. 에브리타임의 수업 칸은
+ * 요일 칸 폭을 꽉 채우므로, 어느 높이가 칸 안인지는 그 줄을 가로질러 보면
+ * 바로 안다. 훨씬 싸고, 모서리가 둥글거나 테두리가 있어도 안 흔들린다.
+ *
+ * 한때 칸 가운데를 지나는 **세로줄 하나만** 봤다. 그러다 글자가 흰 테마에서
+ * 무너졌다 — 흰 글자는 `isPaper` 가 바탕으로 세므로, 그 세로줄이 글자를 지날
+ * 때마다 칸이 토막 났다. 과목명이 두 줄인 칸일수록 심해서, 살아남은 토막에
+ * 과목명이 반쯤 잘려 들어가고 인식기가 그걸 통째로 흘렸다.
+ *
+ * 그래서 한 줄이 아니라 칸 너비를 여러 자리에서 본다. 글자는 어느 높이에서든
+ * 폭의 일부만 차지하므로, 다수결로 물으면 글자에 속지 않는다.
  */
+/**
+ * 줄에 색이 이만큼(비율) 남아 있으면 칸 안이다.
+ *
+ * 표본 아홉 자리만 찍어 보다가 무너졌다. 과목명은 칸 너비를 거의 다 채우는데
+ * 그 글자가 흰 테마에서는 표본이 죄다 흰 획에 떨어져, 글자가 있는 줄을 통째로
+ * 칸 밖으로 세었다. 「기초프로그래밍II」 한 칸이 셋으로 토막 났다.
+ *
+ * 줄 전체를 훑으면 그럴 일이 없다. 글자가 아무리 넓어도 획 사이에는 칸 색이
+ * 남고, 칸과 칸 사이의 틈은 처음부터 끝까지 하얗다.
+ */
+const PAINTED_ENOUGH = 0.08;
+const SCAN_STEP = 2;
+
 const runsInColumn = (
   data: Uint8ClampedArray,
   width: number,
   height: number,
-  x: number,
+  left: number,
+  right: number,
   minHeight: number,
 ): Run[] => {
+  const from = Math.max(0, Math.round(left));
+  const to = Math.min(width, Math.round(right));
+  const looked = Math.ceil((to - from) / SCAN_STEP);
+  if (looked <= 0) return [];
+  const enough = Math.max(2, Math.round(looked * PAINTED_ENOUGH));
+
   const runs: Run[] = [];
   let start = -1;
   let colour: number[] | null = null;
@@ -83,30 +116,43 @@ const runsInColumn = (
     colour = null;
   };
 
+  const channel: number[][] = [[], [], []];
   for (let y = 0; y < height; y += 1) {
-    const i = (y * width + x) * 4;
-    const px = [data[i], data[i + 1], data[i + 2]];
+    channel[0].length = 0;
+    channel[1].length = 0;
+    channel[2].length = 0;
+    for (let x = from; x < to; x += SCAN_STEP) {
+      const i = (y * width + x) * 4;
+      if (isPaper(data[i], data[i + 1], data[i + 2])) continue;
+      channel[0].push(data[i]);
+      channel[1].push(data[i + 1]);
+      channel[2].push(data[i + 2]);
+    }
 
-    if (isPaper(px[0], px[1], px[2])) {
+    if (channel[0].length < enough) {
       close(y);
       continue;
     }
+
+    /*
+     * 그 줄의 대표색은 색이 남은 픽셀들의 가운뎃값으로 잡는다.
+     *
+     * 예전에는 '어두우면 글자' 로 걸러 냈는데, 그 잣대는 글자가 어두운 테마에만
+     * 맞았다. 칸 색 자체가 중간 톤이면 칸 색이 글자로 걸러져 대표색이 아예 안
+     * 잡혔다. 가운뎃값은 글자가 검든 희든 상관없다 — 어느 쪽이든 소수다.
+     */
+    const here = [median(channel[0]), median(channel[1]), median(channel[2])];
+
     if (start < 0) {
       start = y;
-      colour = isGlyph(px[0], px[1], px[2]) ? null : px;
-      continue;
-    }
-    /* 칸 색은 글자가 아닌 자리에서만 잡는다. 글자 위에서 잡으면 늘 어긋난다. */
-    if (isGlyph(px[0], px[1], px[2])) continue;
-    if (!colour) {
-      colour = px;
+      colour = here;
       continue;
     }
     /* 색이 확 바뀌면 다른 수업이 맞붙은 것이다. 사이에 흰 틈이 없을 수 있다. */
-    if (differs(colour, px)) {
+    if (colour && differs(colour, here)) {
       close(y);
       start = y;
-      colour = px;
+      colour = here;
     }
   }
   close(height);
@@ -164,6 +210,117 @@ export const fitTimeAxis = (
 export const minutesAt = (axis: TimeAxis, y: number): number =>
   axis.originMinutes + (y - axis.originY) * axis.minutesPerPixel;
 
+/* ── 눈금 고르기 ──────────────────────────────────────────────────────── */
+
+export interface HourMark {
+  hour: number;
+  y: number;
+}
+
+/** 자에서 이만큼 넘게 벗어난 눈금은 잘못 읽은 것으로 본다. */
+const OFF_THE_RULER = 30;
+
+/**
+ * 가운뎃값 기울기로 자를 세우고, 거기서 벗어난 눈금을 뺀다.
+ *
+ * 두 점만으로 자를 세우면 그 둘 중 하나가 잘못 읽힌 순간 표 전체가 어긋난다.
+ * 실제로 `16시` 가 `봅` 으로, `11시` 가 `기시` 로 읽히는 걸 봤다. 모든 짝의
+ * 기울기를 구해 그 가운뎃값을 쓰면, 절반 넘게 성한 한 틀리지 않는다.
+ */
+const onTheRuler = (marks: HourMark[]): HourMark[] => {
+  const slopes: number[] = [];
+  for (let i = 0; i < marks.length; i += 1)
+    for (let j = i + 1; j < marks.length; j += 1) {
+      const dy = marks[j].y - marks[i].y;
+      if (dy === 0) continue;
+      slopes.push(((marks[j].hour - marks[i].hour) * HOUR) / dy);
+    }
+  if (slopes.length === 0) return [];
+
+  /*
+   * 아래로 갈수록 시각이 커지지 않으면 자가 아니다. 빈손으로 돌려준다.
+   *
+   * 한때 이 자리에서 눈금을 그대로 돌려줬는데, 그러면 12시간제를 펴지 않은
+   * 가설이 「하나도 안 버렸으니 가장 잘 맞는다」로 둔갑해 늘 이겼다. 못 세운
+   * 자는 아무것도 얹지 못한 자로 쳐야 위에서 제대로 고른다.
+   */
+  const minutesPerPixel = median(slopes);
+  if (!Number.isFinite(minutesPerPixel) || minutesPerPixel <= 0) return [];
+
+  const base = median(marks.map((m) => m.hour * HOUR - m.y * minutesPerPixel));
+  return marks.filter(
+    (m) =>
+      Math.abs(m.hour * HOUR - (base + m.y * minutesPerPixel)) <= OFF_THE_RULER,
+  );
+};
+
+const HALF_DAY = 12;
+const LAST_HOUR = 23;
+
+/**
+ * 12시간제로 적힌 눈금을 편다.
+ *
+ * 어떤 시간표는 왼쪽에 `9 10 11 12 1 2 3 4` 라고만 적는다. 아래로 갈수록
+ * 시각이 커진다고 보고 그대로 읽으면 12 다음의 1 에서 기울기가 뒤집혀,
+ * 자가 아예 안 서고 표를 통째로 못 읽는다.
+ *
+ * 정오는 하루에 한 번뿐이므로 넘어가는 자리도 하나다. 그 자리를 위에서부터
+ * 하나씩 옮겨 보며, 자에 가장 많이 얹히는 것을 고른다. 안 옮기는 쪽(24시간제)
+ * 부터 보므로, 굳이 오후로 읽지 않아도 되는 표는 건드리지 않는다.
+ */
+export const readHourMarks = (marks: HourMark[]): HourMark[] => {
+  const sorted = [...marks].sort((a, b) => a.y - b.y);
+  let best: HourMark[] = [];
+
+  for (let noon = sorted.length; noon >= 0; noon -= 1) {
+    const guess = sorted.map((m, i) =>
+      i >= noon ? { hour: m.hour + HALF_DAY, y: m.y } : m,
+    );
+    if (guess.some((m) => m.hour > LAST_HOUR)) continue;
+
+    const kept = onTheRuler(guess);
+    if (kept.length > best.length) best = kept;
+  }
+  return best;
+};
+
+/**
+ * 자를 수업 칸의 위쪽 경계에 맞춰 다시 재운다.
+ *
+ * `fitTimeAxis` 는 눈금 라벨이 칸 **가운데** 놓인다고 보고 기준을 반 칸 올린다.
+ * 에브리타임 기본 테마는 그렇지만, 라벨을 칸 **위**에 붙이는 테마도 있다.
+ * 그런 그림에서는 그 보정이 되레 표 전체를 30분 밀어 버린다.
+ *
+ * 어느 쪽인지는 그림에 이미 적혀 있다 — 수업 칸의 위쪽 경계다. 자가 맞으면
+ * 그 자리들이 정각에 떨어지고, 반 칸 밀렸으면 죄다 30분에 떨어진다. 그래서
+ * 라벨의 생김새를 헤아리는 대신 칸들에게 물어본다.
+ *
+ * 칸이 적거나 반이 안 모이면 손대지 않는다. 수업이 30분에 시작하는 표도
+ * 있어서, 어중간한 근거로 옮기면 맞던 것까지 틀린다.
+ */
+const ALIGN_TOLERANCE = 8;
+const ALIGN_QUORUM = 0.6;
+
+export const alignToBlocks = (axis: TimeAxis, tops: number[]): TimeAxis => {
+  if (tops.length < 3) return axis;
+
+  const off = tops.map((y) => {
+    const rest = minutesAt(axis, y) % HOUR;
+    return rest < 0 ? rest + HOUR : rest;
+  });
+  const agree = (shift: number) =>
+    off.filter((o) => {
+      const gap = Math.abs(o - shift);
+      return Math.min(gap, HOUR - gap) <= ALIGN_TOLERANCE;
+    }).length;
+
+  const stay = agree(0);
+  const move = agree(HOUR / 2);
+  if (move <= stay || move < Math.ceil(tops.length * ALIGN_QUORUM)) return axis;
+
+  return { ...axis, originMinutes: axis.originMinutes - HOUR / 2 };
+};
+
 /**
  * 정각으로 맞춘다.
  *
@@ -212,6 +369,24 @@ const OCR_ASSETS = {
  */
 const OCR_LANGS = ['kor'];
 
+/**
+ * 막혔을 때만 부르는 두 번째 인식기.
+ *
+ * 강의실 코드는 숫자와 하이픈뿐이고 숫자는 라틴 글자다. 그런데 한국어 모델은
+ * 손글씨 테마의 숫자에서 곧잘 앞자리를 흘린다 — `7-615` 가 `-615` 로,
+ * `43-402` 가 `3-402` 로 온다. 하필 그 앞자리가 건물 번호다.
+ *
+ * 영어 모델은 그 자리를 더 잘 읽는다. 다만 통째로 바꾸면 안 된다 — 두 모델은
+ * **서로 다른 글꼴에서 무너진다**. 손글씨 11종으로 재 보니 한국어 모델이
+ * 놓치는 것을 영어 모델이 잡고, 그 반대도 그만큼 있었다. 둘을 한 인식기로
+ * 합쳐도 마찬가지였다(어떤 글꼴은 9/11 에서 3/11 으로 떨어졌다).
+ *
+ * 그래서 섞지 않고 순서를 둔다. 한국어로 먼저 읽고, 그 결과가 캠퍼스에 실재하는
+ * 건물로 풀리지 않을 때만 그 칸을 영어로 다시 읽는다. 82% 에서 89% 가 됐고
+ * 뒷걸음질한 글꼴은 없었다.
+ */
+const FALLBACK_LANGS = ['eng'];
+
 interface Reader {
   read: (canvas: HTMLCanvasElement) => Promise<Word[]>;
   close: () => Promise<void>;
@@ -231,6 +406,7 @@ interface Reader {
  * 알고 있으니 그쪽이 말한다. 여기서는 부속 내려받는 소식만 넘긴다.
  */
 const openReader = async (
+  langs: string[],
   onProgress?: (ratio: number, what: string) => void,
 ): Promise<Reader> => {
   /*
@@ -242,7 +418,7 @@ const openReader = async (
     mod.createWorker ??
     (mod as unknown as { default: typeof mod }).default.createWorker;
 
-  const worker = await createWorker(OCR_LANGS, 1, {
+  const worker = await createWorker(langs, 1, {
     ...OCR_ASSETS,
     logger: (m: { status: string; progress: number }) => {
       if (m.status !== 'recognizing text') onProgress?.(m.progress, m.status);
@@ -333,6 +509,105 @@ const cropBlock = (
 };
 
 /**
+ * 칸 안에서 글자가 실제로 놓인 세로 구간을 찾는다.
+ *
+ * 두 시간짜리 수업 칸은 길쭉한데 글자는 맨 위 몇 줄뿐이다. 그 빈 바닥까지
+ * 통째로 인식기에 넘기면, 넓은 여백 한가운데 글자가 섬처럼 떠 있는 꼴이 되어
+ * 판면 분석이 그 섬을 아예 못 본다 — 손글씨 테마에서 두 시간짜리 칸 셋이
+ * 나란히 빈칸으로 나왔다. 글자가 끝나는 데서 잘라 주면 그 셋이 다 살아난다.
+ *
+ * 바탕색은 칸 곳곳에서 뽑아 가운뎃값으로 정한다. 한 점만 찍어 보면 하필 글자
+ * 위를 찍는 수가 있다.
+ */
+const CONTENT_PAD = 6;
+
+const contentRows = (
+  data: Uint8ClampedArray,
+  width: number,
+  left: number,
+  right: number,
+  top: number,
+  bottom: number,
+): { first: number; last: number } | null => {
+  const at = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    return [data[i], data[i + 1], data[i + 2]];
+  };
+
+  const sample: number[][] = [];
+  for (
+    let y = top;
+    y < bottom;
+    y += Math.max(1, Math.floor((bottom - top) / 12))
+  )
+    for (
+      let x = left;
+      x < right;
+      x += Math.max(1, Math.floor((right - left) / 6))
+    )
+      sample.push(at(x, y));
+  if (sample.length === 0) return null;
+  const paper = [0, 1, 2].map((c) => median(sample.map((p) => p[c])));
+
+  let first = -1;
+  let last = -1;
+  for (let y = top; y < bottom; y += 1) {
+    let seen = 0;
+    for (let x = left; x < right; x += 2) {
+      if (!differs(paper, at(x, y))) continue;
+      seen += 1;
+      if (seen >= 2) break;
+    }
+    if (seen < 2) continue;
+    if (first < 0) first = y;
+    last = y;
+  }
+  return first < 0 ? null : { first, last };
+};
+
+/**
+ * 왼쪽 시각 눈금 띠를 떼어 낸다.
+ *
+ * 칸에 쓴 방법을 눈금에도 그대로 쓴다. 그림을 통째로 넘기면 시각 라벨이
+ * 형편없이 읽힌다 — 손글씨 테마에서 여덟 중 둘만 살았고(`9`가 `태`로,
+ * `11`이 `"`로), 그 둘로 세운 자는 표 전체를 엉뚱한 시각으로 옮겨 놨다.
+ * 띠만 떼어 키워 넘기면 같은 그림에서 여섯이 살고, 기본 테마는 여덟 전부가
+ * 산다.
+ */
+const GUTTER_WIDTH = 150;
+
+const cropGutter = (
+  source: HTMLCanvasElement,
+  right: number,
+): { canvas: HTMLCanvasElement; scale: number } | null => {
+  const width = Math.round(right);
+  if (width < 8) return null;
+
+  const scale = Math.min(3, Math.max(1, GUTTER_WIDTH / width));
+  const crop = document.createElement('canvas');
+  crop.width = Math.round(width * scale) + CROP_MARGIN * 2;
+  crop.height = Math.round(source.height * scale) + CROP_MARGIN * 2;
+
+  const ctx = crop.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, crop.width, crop.height);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    source,
+    0,
+    0,
+    width,
+    source.height,
+    CROP_MARGIN,
+    CROP_MARGIN,
+    crop.width - CROP_MARGIN * 2,
+    crop.height - CROP_MARGIN * 2,
+  );
+  return { canvas: crop, scale };
+};
+
+/**
  * 잘라 낸 칸 하나에서 강의실을 고른다.
  *
  * 칸 안에 강의실처럼 생긴 낱말이 여럿일 수 있다. 과목명이나 교수 이름이 뭉개져
@@ -340,10 +615,14 @@ const cropBlock = (
  * 먼저 온 것을 집지 않고, **캠퍼스에 실제로 있는 건물 번호로 풀리는 것**을
  * 고른다. 그런 게 여럿이면 아래쪽을 고른다 — 강의실은 칸의 마지막 줄에 적힌다.
  */
-const roomInBlock = (
-  words: Word[],
-  knownBuildings: Set<number>,
-): { room: string; confidence: number } => {
+interface RoomRead {
+  room: string;
+  confidence: number;
+  /** 캠퍼스에 실재하는 건물로 풀렸는지. 두 번째 인식기를 부를지 정하는 값이다. */
+  resolved: boolean;
+}
+
+const roomInBlock = (words: Word[], knownBuildings: Set<number>): RoomRead => {
   const candidates = words.filter((w) => looksLikeRoomCode(w.text));
   const resolves = (w: Word) => {
     const no = buildingNoOf(repairRoom(w.text, knownBuildings));
@@ -359,30 +638,23 @@ const roomInBlock = (
     ? {
         room: repairRoom(pick.text, knownBuildings),
         confidence: pick.confidence,
+        resolved: good.includes(pick),
       }
-    : { room: '', confidence: 0 };
+    : { room: '', confidence: 0, resolved: false };
 };
-
-interface Layout {
-  /** 요일 칸 다섯의 가운데 가로 자리. */
-  columns: number[];
-  /** 요일 칸 너비. */
-  pitch: number;
-  axis: TimeAxis;
-  /** 이보다 낮은 자국은 칸이 아니다. */
-  minHeight: number;
-}
 
 /**
  * 그림에서 격자를 읽어 낸다 — 요일 칸이 어디고, 세로 어디가 몇 시인지.
  *
  * 사람이 알아야 할 만큼 잘못됐으면 할 말을 글로 돌려준다.
  */
-const readLayout = (
+/**
+ * 요일 칸의 가로 자리를 잡는다. 머리글 「월화수목금」이 곧 그 자리다.
+ */
+const readColumns = (
   canvas: HTMLCanvasElement,
   words: Word[],
-): Layout | string => {
-  /* 요일 머리글의 가로 자리가 곧 요일 칸의 자리다. */
+): { columns: number[]; pitch: number } | string => {
   const heads = DAY_HEADS.map((label) => {
     const hit = words.find(
       (w) => w.text === label && w.y < canvas.height * 0.15,
@@ -401,28 +673,22 @@ const readLayout = (
   const columns = heads.map((x, i) =>
     x !== null ? x : heads[firstIndex]! + (i - firstIndex) * pitch,
   );
+  return { columns, pitch };
+};
 
-  /* 왼쪽 시각 눈금. 전부 읽히지 않아도 두 개면 자가 선다. */
-  const leftEdge = columns[0] - pitch / 2;
-  const marks: { hour: number; y: number }[] = [];
+/** 시각 눈금처럼 생긴 낱말. `9`, `9시`, `13` 을 받는다. */
+const HOUR_LIKE = /^(\d{1,2})\s*시?$/;
+const SURE_ENOUGH = 60;
+
+const hourMarksIn = (words: Word[], scale: number, top: number): HourMark[] => {
+  const marks: HourMark[] = [];
   for (const w of words) {
-    if (w.right > leftEdge) continue;
-    const hour = Number(/^(\d{1,2})\s*시?$/.exec(w.text)?.[1]);
-    if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue;
-    if (w.confidence < 60) continue;
-    marks.push({ hour, y: (w.y + w.bottom) / 2 });
+    const hour = Number(HOUR_LIKE.exec(w.text)?.[1]);
+    if (!Number.isFinite(hour) || hour < 0 || hour > LAST_HOUR) continue;
+    if (w.confidence < SURE_ENOUGH) continue;
+    marks.push({ hour, y: top + (w.y + w.bottom) / 2 / scale });
   }
-  const axis = fitTimeAxis(marks);
-  if (!axis)
-    return '왼쪽 시각 눈금을 못 읽었습니다. 시간이 함께 나온 그림이어야 합니다.';
-
-  /*
-   * 흰색만 바탕으로 보게 되면서 한두 픽셀짜리 눈금선까지 걸리는데, 한 교시의
-   * 삼분의 일도 안 되는 높이는 수업 칸일 수 없다.
-   */
-  const minHeight = Math.max(4, Math.round(HOUR / axis.minutesPerPixel / 3));
-
-  return { columns, pitch, axis, minHeight };
+  return marks;
 };
 
 /* ── 전체 ─────────────────────────────────────────────────────────────── */
@@ -460,16 +726,78 @@ export const parseTimetableImage = async (
   ctx.drawImage(image, 0, 0);
   image.close();
 
-  const reader = await openReader(onProgress);
+  const reader = await openReader(OCR_LANGS, onProgress);
+
+  /*
+   * 두 번째 인식기는 막힌 칸이 나올 때까지 아예 만들지 않는다.
+   *
+   * 3MB 짜리 짐이라, 글꼴이 멀쩡한 사람에게까지 지울 이유가 없다. 손글씨
+   * 테마로 재 봤을 때 이쪽이 실제로 도는 칸은 여덟에 하나꼴이었고, 기본
+   * 테마에서는 한 칸도 없었다.
+   */
+  const backup: { reader: Reader | null } = { reader: null };
+  const readRoom = async (
+    crop: HTMLCanvasElement,
+    buildings: Set<number>,
+  ): Promise<RoomRead> => {
+    const first = roomInBlock(await reader.read(crop), buildings);
+    if (first.resolved) return first;
+
+    backup.reader ??= await openReader(FALLBACK_LANGS, onProgress);
+    const second = roomInBlock(await backup.reader.read(crop), buildings);
+    /* 두 번째도 건물로 못 풀면 첫 번째 것을 그대로 둔다. 확인 화면이 받는다. */
+    return second.resolved ? second : first;
+  };
+
   try {
     /*
      * 처음 한 번은 그림 전체를 읽는다. 여기서 얻는 건 격자뿐이다 — 요일 머리글과
      * 왼쪽 시각 눈금. 둘 다 흰 바탕에 놓인 짧은 글자라 이 한 번으로 잘 읽힌다.
      */
     onProgress?.(0, 'recognizing text');
-    const layout = readLayout(canvas, await reader.read(canvas));
-    if (typeof layout === 'string') return { slots: [], warnings: [layout] };
-    const { columns, pitch, axis, minHeight } = layout;
+    const page = await reader.read(canvas);
+
+    const grid = readColumns(canvas, page);
+    if (typeof grid === 'string') return { slots: [], warnings: [grid] };
+    const { columns, pitch } = grid;
+
+    /*
+     * 시각 눈금은 왼쪽 띠만 따로 떼어 읽는다. 왜 그러는지는 `cropGutter` 에
+     * 적었다. 떼어 내지 못했거나 거기서 두 개도 못 건지면, 통째로 읽은 것에서
+     * 주워 쓴다 — 없는 것보다는 낫다.
+     */
+    const leftEdge = columns[0] - pitch / 2;
+    const gutter = cropGutter(canvas, leftEdge);
+    const fromStrip = gutter
+      ? hourMarksIn(
+          await reader.read(gutter.canvas),
+          gutter.scale,
+          -CROP_MARGIN / gutter.scale,
+        )
+      : [];
+    const marks =
+      fromStrip.length >= 2
+        ? fromStrip
+        : hourMarksIn(
+            page.filter((w) => w.right <= leftEdge),
+            1,
+            0,
+          );
+
+    const ruler = fitTimeAxis(readHourMarks(marks));
+    if (!ruler)
+      return {
+        slots: [],
+        warnings: [
+          '왼쪽 시각 눈금을 못 읽었습니다. 시간이 함께 나온 그림이어야 합니다.',
+        ],
+      };
+
+    /*
+     * 흰색만 바탕으로 보게 되면서 한두 픽셀짜리 눈금선까지 걸리는데, 한 교시의
+     * 삼분의 일도 안 되는 높이는 수업 칸일 수 없다.
+     */
+    const minHeight = Math.max(4, Math.round(HOUR / ruler.minutesPerPixel / 3));
 
     /* 색칠된 칸을 먼저 다 찾아 둔다. 몇 조각인지 알아야 진행률을 말할 수 있다. */
     const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -480,15 +808,22 @@ export const parseTimetableImage = async (
         data,
         canvas.width,
         canvas.height,
-        centre,
+        centre - pitch / 2,
+        centre + pitch / 2,
         minHeight,
       )) {
         /* 한 교시의 절반도 안 되는 자국은 칸이 아니라 눈금이나 그림자다. */
-        if (minutesAt(axis, run.bottom) - minutesAt(axis, run.top) < HOUR / 2)
+        if (minutesAt(ruler, run.bottom) - minutesAt(ruler, run.top) < HOUR / 2)
           continue;
         found.push({ day: day as Weekday, centre, run });
       }
     }
+
+    /* 칸을 다 찾았으니, 이제 그 위쪽 경계에 자를 맞춰 재운다. */
+    const axis = alignToBlocks(
+      ruler,
+      found.map(({ run }) => run.top),
+    );
 
     /*
      * 강의실은 칸을 하나씩 떼어 읽는다.
@@ -507,12 +842,24 @@ export const parseTimetableImage = async (
       onProgress?.((i + 1) / (found.length + 1), 'recognizing text');
 
       const startMinutes = snap(minutesAt(axis, run.top));
+
+      /* 글자가 있는 데까지만 잘라 넘긴다. 빈 바닥은 인식기를 헷갈리게 한다. */
+      const left = Math.max(0, Math.round(centre - pitch / 2));
+      const right = Math.min(canvas.width, Math.round(centre + pitch / 2));
+      const ink = contentRows(
+        data,
+        canvas.width,
+        left,
+        right,
+        run.top,
+        run.bottom,
+      );
       const crop = cropBlock(
         canvas,
         centre - pitch / 2,
-        run.top,
+        ink ? Math.max(run.top, ink.first - CONTENT_PAD) : run.top,
         centre + pitch / 2,
-        run.bottom,
+        ink ? Math.min(run.bottom, ink.last + CONTENT_PAD) : run.bottom,
       );
       slots.push({
         day,
@@ -523,7 +870,7 @@ export const parseTimetableImage = async (
           startMinutes + HOUR,
         ),
         ...(crop
-          ? roomInBlock(await reader.read(crop), knownBuildings)
+          ? await readRoom(crop, knownBuildings)
           : { room: '', confidence: 0 }),
       });
     }
@@ -544,5 +891,6 @@ export const parseTimetableImage = async (
     return { slots, warnings };
   } finally {
     await reader.close();
+    await backup.reader?.close();
   }
 };
