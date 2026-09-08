@@ -30,6 +30,17 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/*
+ * 길찾기가 실제로 쓰는 비용 셈을 그대로 들여온다. 계단 어귀 단계는 「이 가닥을
+ * 놓으면 길이 되레 길어지지 않는가」를 되물어야 하는데, 그 물음의 답은 앱이
+ * 무엇을 싸다고 보는지에 달려 있다. 여기에 상수를 베껴 두면 둘이 어긋난다.
+ *
+ * .ts 를 그대로 부르는 건 노드가 타입을 벗겨 주기 때문이다(22.18+). cost.ts 가
+ * 값을 import 하는 순간 깨진다 — 노드는 확장자 없는 상대 경로를 못 찾는다.
+ * 지금 cost.ts 의 import 는 타입뿐이고, 앞으로도 그래야 한다.
+ */
+import { costFor } from '../src/routing/cost.ts';
+
 /* ── 기하 ───────────────────────────────────────────────────────────────── */
 
 const R = 6_371_008.8;
@@ -448,6 +459,226 @@ export const mendSpurs = (doc, overrides = {}) => {
   return done;
 };
 
+/* ── 계단 어귀에 건물 매달기 ────────────────────────────────────────────── */
+
+export const STAIR_SPUR_DEFAULTS = {
+  /** 건물에서 이 거리 안에 있는 계단 어귀만 본다(m). */
+  reach: 55,
+  /** 지금 그 어귀까지 곧장 가는 거리의 이 배 이상 돌고 있어야 맨다. */
+  ratio: 1.6,
+  /** 그리고 돌아가는 길이 이만큼은 줄어야 한다(m). */
+  gain: 25,
+  /** 남의 건물 코앞을 이만큼 안쪽으로 스치는 선은 긋지 않는다(m). */
+  clear: 22,
+  /** 놓았더니 어디론가 가는 길이 이보다 길어지면 물린다(m). */
+  slack: 15,
+  rounds: 60,
+};
+
+/** 선분 a—b 에서 p 까지 가장 가까운 거리(m). */
+const distanceToSegment = (p, a, b) => {
+  const k = M_PER_DEG_LAT * Math.cos(rad(a.lat));
+  const px = (p.lng - a.lng) * k;
+  const py = (p.lat - a.lat) * M_PER_DEG_LAT;
+  const bx = (b.lng - a.lng) * k;
+  const by = (b.lat - a.lat) * M_PER_DEG_LAT;
+
+  const span = bx * bx + by * by;
+  const t =
+    span === 0 ? 0 : Math.max(0, Math.min(1, (px * bx + py * by) / span));
+  return Math.hypot(px - t * bx, py - t * by);
+};
+
+/**
+ * 한 곳에서 다른 모든 곳까지, 앱이 고를 길이 몇 m 인지.
+ *
+ * 비용은 앱과 같게 「최소시간」으로 세고, 재는 것은 그 길의 **거리**다. 우리가
+ * 막고 싶은 것이 「빠르다며 더 걷게 만드는 가닥」이기 때문이다. 남의 건물을
+ * 관통해 가지 못하는 것도 앱과 같다(src/routing/dijkstra.ts).
+ */
+const walkFrom = (start, nodes, links) => {
+  const options = { profile: 'time', allowIndoor: true };
+  const best = new Map([[start, { cost: 0, meters: 0 }]]);
+  const done = new Set();
+  const queue = [{ id: start, cost: 0 }];
+
+  while (queue.length) {
+    queue.sort((a, z) => a.cost - z.cost);
+    const { id } = queue.shift();
+    if (done.has(id)) continue;
+    done.add(id);
+
+    const kind = nodes.get(id)?.kind;
+    if (id !== start && (kind === 'building' || kind === 'place')) continue;
+
+    const here = best.get(id);
+    for (const link of links.get(id) ?? []) {
+      const weight = costFor(link.edge, link.meters, options);
+      if (!Number.isFinite(weight)) continue;
+      const cost = here.cost + weight;
+      if (cost >= (best.get(link.to)?.cost ?? Infinity)) continue;
+      best.set(link.to, { cost, meters: here.meters + link.meters });
+      queue.push({ id: link.to, cost });
+    }
+  }
+
+  return best;
+};
+
+/** 이름 있는 곳끼리 오가는 길의 거리를 모두 잰다. 「a|b → m」. */
+const placePairs = (doc) => {
+  const { nodes, links } = indexOf(doc);
+  const places = doc.nodes.filter((node) => node.kind !== 'junction');
+  const table = new Map();
+
+  for (const from of places) {
+    const reach = walkFrom(from.id, nodes, links);
+    for (const to of places) {
+      if (from.id >= to.id) continue;
+      const hit = reach.get(to.id);
+      if (hit) table.set(`${from.id}|${to.id}`, hit.meters);
+    }
+  }
+
+  return table;
+};
+
+/** 두 표를 견줘, 가장 크게 길어진 쌍. 없으면 null. */
+const walkedFarther = (before, after, slack) => {
+  let worst = null;
+  for (const [pair, was] of before) {
+    const now = after.get(pair);
+    if (now === undefined) continue;
+    const more = now - was;
+    if (more > slack && (!worst || more > worst.more)) {
+      worst = { pair, was, now, more };
+    }
+  }
+  return worst;
+};
+
+/**
+ * 계단으로 가면 코앞인데, 그래프에서는 계단 어귀까지 나가는 길이 없어 도는 곳.
+ *
+ * 앞 단계(mendSpurs)가 이미 「곧장 가면 코앞인데 한참 도는」 길목에 가닥을
+ * 맨다. 다만 문턱이 세서 — 세 배 이상 돌고 50m 넘게 줄어야 한다 — 계단은 그
+ * 그물을 자주 빠져나간다. 계단은 짧고, 어귀는 건물에서 30~50m 쯤 떨어져 있고,
+ * 돌아가는 길도 두 배 남짓인 자리가 많다. 그래서 계단 어귀만 따로, 더 낮은
+ * 문턱으로 한 번 더 훑는다.
+ *
+ * 없는 길을 지어내지 않으려고 넷을 건다.
+ *
+ *   1. 가까울 때만   — 건물에서 55m 안의 계단 어귀만 본다.
+ *   2. 이득이 클 때만 — 곧장 가는 거리의 1.6배 이상 돌고, 25m 넘게 줄어야 한다.
+ *   3. 한 계단에 한 어귀만 — 같은 계단의 양쪽에 다 매달면 그 건물이 계단을
+ *      대신하는 승강기가 된다. 실제로는 두 어귀의 높이가 다르다.
+ *   4. 남의 건물을 스치지 않게 — 접속선은 건물 **중심**까지 곧게 이은 모형이라,
+ *      다른 건물 코앞을 지나는 선은 그 건물을 뚫고 가는 길이 된다.
+ *
+ * 그러고도 확인할 것이 하나 남는다. 어귀는 높이가 다를 수 있는데 좌표만으로는
+ * 알 길이 없다. 어귀를 잘못 잡으면 계단을 타지 않고도 그 자리에 선 것이 되어,
+ * 길찾기가 계단 대신 평지로 빙 돌기 시작한다 — **빠르다면서 더 걷는다.** 그래서
+ * 가닥을 하나 놓을 때마다 이름 있는 곳끼리의 길을 모두 다시 재서, 15m 넘게
+ * 길어지는 데가 하나라도 생기면 그 가닥을 도로 뺀다.
+ */
+export const mendStairSpurs = (doc, overrides = {}) => {
+  const options = { ...STAIR_SPUR_DEFAULTS, ...overrides };
+  const taken = new Set(doc.edges.map((edge) => edge.id));
+  let seq = 0;
+  const freshId = () => {
+    let id;
+    do {
+      seq += 1;
+      id = `t${seq}`;
+    } while (taken.has(id));
+    taken.add(id);
+    return id;
+  };
+
+  const done = [];
+  const refused = [];
+
+  for (let round = 0; round < options.rounds; round += 1) {
+    const { nodes, links } = indexOf(doc);
+    const stairs = doc.edges.filter((edge) => edge.surface === 'stairs');
+    const wanted = [];
+
+    for (const place of doc.nodes) {
+      if (place.kind === 'junction') continue;
+      const reach = reachFrom(place.id, links);
+      const tied = new Set((links.get(place.id) ?? []).map((link) => link.to));
+
+      for (const stair of stairs) {
+        for (const id of [stair.from, stair.to]) {
+          const node = nodes.get(id);
+          if (!node || node.kind !== 'junction' || tied.has(id)) continue;
+          /* 같은 계단의 반대쪽 어귀에 이미 매달려 있으면 건너뛴다. */
+          if (tied.has(id === stair.from ? stair.to : stair.from)) continue;
+
+          const straight = metersBetween(place, node);
+          if (straight > options.reach) continue;
+          const around = reach.get(id) ?? Infinity;
+          if (around < straight * options.ratio) continue;
+          if (around - straight < options.gain) continue;
+
+          const scrapes = doc.nodes.some(
+            (other) =>
+              other.kind !== 'junction' &&
+              other.id !== place.id &&
+              distanceToSegment(other, place, node) < options.clear,
+          );
+          if (scrapes) continue;
+
+          wanted.push({
+            place,
+            node,
+            stair,
+            straight,
+            saved: around - straight,
+          });
+        }
+      }
+    }
+
+    if (wanted.length === 0) break;
+    wanted.sort((a, z) => z.saved - a.saved);
+
+    const before = placePairs(doc);
+    let placed = null;
+
+    for (const pick of wanted) {
+      const edge = {
+        id: freshId(),
+        from: pick.place.id,
+        to: pick.node.id,
+        surface: 'path',
+        shortcut: false,
+        covered: false,
+        connector: true,
+        source: 'assumed',
+        note: `계단 어귀까지 ${Math.round(pick.straight)}m 를 곧게 이었다. 이 어귀까지 돌아가던 ${Math.round(pick.saved + pick.straight)}m 를 덜어낸다.`,
+      };
+      doc.edges.push(edge);
+
+      const farther = walkedFarther(before, placePairs(doc), options.slack);
+      if (farther) {
+        doc.edges.pop();
+        taken.delete(edge.id);
+        refused.push({ ...pick, farther });
+        continue;
+      }
+
+      placed = pick;
+      break;
+    }
+
+    if (!placed) break;
+    done.push(placed);
+  }
+
+  return { done, refused };
+};
+
 /** 아직 허공에서 끝나는 곳. 고치고 난 뒤 무엇이 남았는지 보려고. */
 export const deadEnds = (doc) => {
   const { links } = indexOf(doc);
@@ -502,6 +733,7 @@ if (isMain) {
 
   const done = mendGraph(doc);
   const spurs = mendSpurs(doc);
+  const stairSpurs = mendStairSpurs(doc);
 
   const bySurface = {};
   for (const item of done)
@@ -534,6 +766,42 @@ if (isMain) {
         `  ${spur.place.name} → ${spur.node.id}` +
           ` — 곧장 ${Math.round(spur.straight)}m 인데` +
           ` ${Math.round(spur.saved + spur.straight)}m 를 돌고 있었다`,
+      );
+    }
+  }
+
+  if (stairSpurs.done.length) {
+    console.log(`\n계단 어귀에 가닥을 ${stairSpurs.done.length}개 맸습니다.`);
+    for (const spur of stairSpurs.done) {
+      console.log(
+        `  ${spur.place.name} → ${spur.node.id} (계단 ${spur.stair.id})` +
+          ` — 곧장 ${Math.round(spur.straight)}m 인데` +
+          ` ${Math.round(spur.saved + spur.straight)}m 를 돌고 있었다`,
+      );
+    }
+  }
+
+  /* 한 판에서 물렸다가 다음 판에 놓인 것도 있다. 끝내 안 놓인 것만 센다. */
+  const placedStamps = new Set(
+    stairSpurs.done.map((spur) => `${spur.place.id}|${spur.node.id}`),
+  );
+  const refused = [];
+  const seenRefusal = new Set();
+  for (const spur of stairSpurs.refused) {
+    const stamp = `${spur.place.id}|${spur.node.id}`;
+    if (placedStamps.has(stamp) || seenRefusal.has(stamp)) continue;
+    seenRefusal.add(stamp);
+    refused.push(spur);
+  }
+  if (refused.length) {
+    console.log(
+      `\n놓았다가 도로 뺀 가닥 ${refused.length}개 — 계단을 대신해 버립니다.`,
+    );
+    for (const spur of refused) {
+      console.log(
+        `  ${spur.place.name} → ${spur.node.id} (계단 ${spur.stair.id})` +
+          ` — ${spur.farther.pair} 가 ${Math.round(spur.farther.was)}m 에서` +
+          ` ${Math.round(spur.farther.now)}m 로 길어진다`,
       );
     }
   }

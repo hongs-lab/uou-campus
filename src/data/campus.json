@@ -8681,6 +8681,226 @@
       "connector": true,
       "source": "assumed",
       "note": "건물 중심에서 32m 를 곧게 이었다. 이 길목까지 돌아가던 99m 를 덜어낸다."
+    },
+    {
+      "id": "t1",
+      "from": "b15",
+      "to": "n39",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 55m 를 곧게 이었다. 이 어귀까지 돌아가던 150m 를 덜어낸다."
+    },
+    {
+      "id": "t3",
+      "from": "b19",
+      "to": "n85",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 41m 를 곧게 이었다. 이 어귀까지 돌아가던 119m 를 덜어낸다."
+    },
+    {
+      "id": "t6",
+      "from": "b20",
+      "to": "n77",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 36m 를 곧게 이었다. 이 어귀까지 돌아가던 107m 를 덜어낸다."
+    },
+    {
+      "id": "t9",
+      "from": "b3",
+      "to": "n175",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 48m 를 곧게 이었다. 이 어귀까지 돌아가던 112m 를 덜어낸다."
+    },
+    {
+      "id": "t12",
+      "from": "b19",
+      "to": "n77",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 55m 를 곧게 이었다. 이 어귀까지 돌아가던 108m 를 덜어낸다."
+    },
+    {
+      "id": "t15",
+      "from": "b29",
+      "to": "j3",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 35m 를 곧게 이었다. 이 어귀까지 돌아가던 82m 를 덜어낸다."
+    },
+    {
+      "id": "t19",
+      "from": "b15",
+      "to": "n179",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 34m 를 곧게 이었다. 이 어귀까지 돌아가던 79m 를 덜어낸다."
+    },
+    {
+      "id": "t23",
+      "from": "b18",
+      "to": "n79",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 40m 를 곧게 이었다. 이 어귀까지 돌아가던 83m 를 덜어낸다."
+    },
+    {
+      "id": "t27",
+      "from": "b31",
+      "to": "n24",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 46m 를 곧게 이었다. 이 어귀까지 돌아가던 86m 를 덜어낸다."
+    },
+    {
+      "id": "t31",
+      "from": "b18",
+      "to": "n129",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 31m 를 곧게 이었다. 이 어귀까지 돌아가던 71m 를 덜어낸다."
+    },
+    {
+      "id": "t35",
+      "from": "b37",
+      "to": "n275",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 49m 를 곧게 이었다. 이 어귀까지 돌아가던 87m 를 덜어낸다."
+    },
+    {
+      "id": "t39",
+      "from": "j-new-4",
+      "to": "n218",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 51m 를 곧게 이었다. 이 어귀까지 돌아가던 89m 를 덜어낸다."
+    },
+    {
+      "id": "t43",
+      "from": "b30",
+      "to": "n173",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 36m 를 곧게 이었다. 이 어귀까지 돌아가던 72m 를 덜어낸다."
+    },
+    {
+      "id": "t47",
+      "from": "b23",
+      "to": "n213",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 49m 를 곧게 이었다. 이 어귀까지 돌아가던 86m 를 덜어낸다."
+    },
+    {
+      "id": "t52",
+      "from": "b30",
+      "to": "n35",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 45m 를 곧게 이었다. 이 어귀까지 돌아가던 77m 를 덜어낸다."
+    },
+    {
+      "id": "t53",
+      "from": "b30",
+      "to": "n271",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 48m 를 곧게 이었다. 이 어귀까지 돌아가던 135m 를 덜어낸다."
+    },
+    {
+      "id": "t54",
+      "from": "b30",
+      "to": "n269",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 44m 를 곧게 이었다. 이 어귀까지 돌아가던 89m 를 덜어낸다."
+    },
+    {
+      "id": "t56",
+      "from": "b14",
+      "to": "n129",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 42m 를 곧게 이었다. 이 어귀까지 돌아가던 70m 를 덜어낸다."
+    },
+    {
+      "id": "t58",
+      "from": "b29",
+      "to": "n181",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 19m 를 곧게 이었다. 이 어귀까지 돌아가던 46m 를 덜어낸다."
+    },
+    {
+      "id": "t61",
+      "from": "b42",
+      "to": "n288",
+      "surface": "path",
+      "shortcut": false,
+      "covered": false,
+      "connector": true,
+      "source": "assumed",
+      "note": "계단 어귀까지 32m 를 곧게 이었다. 이 어귀까지 돌아가던 57m 를 덜어낸다."
     }
   ]
 }
