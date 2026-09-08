@@ -32,6 +32,38 @@ const inOrder = (list: ClassSlot[]) =>
   [...list].sort((a, b) => a.day - b.day || a.startMinutes - b.startMinutes);
 
 /**
+ * 무엇을 가져오면 되는지 글보다 먼저 말하는 그림.
+ *
+ * 요일 다섯 줄에 수업 칸 몇을 얹은, 시간표 그 자체다. 무슨 파일이든 받는 빈
+ * 네모를 놓아 두는 것보다 이쪽이 정확하다 — 사진첩에서 어느 그림을 찾아야
+ * 하는지가 한눈에 보인다.
+ */
+const TimetableGlyph = () => (
+  <svg className={s.glyph} viewBox="0 0 84 64" aria-hidden="true">
+    <rect
+      x="0.5"
+      y="0.5"
+      width="83"
+      height="63"
+      rx="6"
+      fill="#fff"
+      stroke="#E5E7EB"
+    />
+    <path d="M0.5 13h83" stroke="#E5E7EB" fill="none" />
+    {[17, 33, 50, 67].map((x) => (
+      <path key={x} d={`M${x} 13v51`} stroke="#F3F4F6" fill="none" />
+    ))}
+    <g fill="#16A152">
+      <rect x="3" y="17" width="11" height="18" rx="2" opacity="0.85" />
+      <rect x="20" y="27" width="11" height="14" rx="2" opacity="0.45" />
+      <rect x="36" y="17" width="11" height="11" rx="2" opacity="0.6" />
+      <rect x="53" y="34" width="11" height="20" rx="2" opacity="0.3" />
+      <rect x="70" y="21" width="11" height="15" rx="2" opacity="0.55" />
+    </g>
+  </svg>
+);
+
+/**
  * 시간표를 올리고, 읽은 결과를 확인하는 화면.
  *
  * 그림에서 읽은 값을 곧바로 쓰지 않는다. 글자 인식은 틀린다 — 틀린 강의실로
@@ -141,24 +173,56 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
           }}
         />
 
-        <button
-          type="button"
-          className={draft.length > 0 ? s.upload.weak : s.upload.strong}
-          disabled={status.kind === 'reading'}
-          onClick={() => fileRef.current?.click()}
-        >
-          {status.kind === 'reading'
-            ? status.note
-            : draft.length > 0
-              ? '다른 이미지로 다시 읽기'
-              : '시간표 이미지 첨부하기'}
-        </button>
-
-        <p className={s.hint}>
-          에브리타임에서{' '}
-          <b className={s.path}>시간표 → 설정 아이콘 → 이미지 저장</b>
-          으로 받은 이미지를 첨부해주세요.
-        </p>
+        {/*
+          표가 없을 때는 이 창에서 할 일이 첨부 하나뿐이라, 화면도 그 하나만
+          말한다. 표가 차고 나면 첨부는 줄 목록 위의 작은 단추로 물러선다.
+        */}
+        {draft.length === 0 ? (
+          <div className={s.blank}>
+            <TimetableGlyph />
+            <p className={s.blankTitle}>
+              {status.kind === 'reading' ? status.note : '시간표 이미지 첨부'}
+            </p>
+            <p className={s.hint}>
+              에브리타임에서{' '}
+              <b className={s.path}>시간표 → 설정 아이콘 → 이미지 저장</b>
+              으로 받은 이미지를 첨부해주세요.
+            </p>
+            <button
+              type="button"
+              className={s.attach}
+              disabled={status.kind === 'reading'}
+              onClick={() => fileRef.current?.click()}
+            >
+              이미지 고르기
+            </button>
+          </div>
+        ) : (
+          <div className={s.listHead}>
+            <span className={s.listCount}>{draft.length}칸</span>
+            <div className={s.listTools}>
+              <button
+                type="button"
+                className={s.tool.plain}
+                disabled={status.kind === 'reading'}
+                onClick={() => fileRef.current?.click()}
+              >
+                {status.kind === 'reading' ? status.note : '다시 읽기'}
+              </button>
+              <button
+                type="button"
+                className={s.tool.danger}
+                onClick={() => {
+                  onClear();
+                  setDraft([]);
+                  setWarnings([]);
+                }}
+              >
+                모두 지우기
+              </button>
+            </div>
+          </div>
+        )}
 
         {status.kind === 'failed' && <p className={s.warn}>{status.note}</p>}
         {warnings.map((note) => (
@@ -168,34 +232,9 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
         ))}
         {unresolved > 0 && (
           <p className={s.warn}>
-            {unresolved}칸은 강의실을 캠퍼스 건물과 못 맞췄습니다 — 아래 붉은
-            칸을 「건물번호-호실」 로 고쳐 주세요.
+            {unresolved}칸은 강의실을 캠퍼스 건물과 못 맞췄습니다 — 표시된 칸을
+            「건물번호-호실」 로 고쳐 주세요.
           </p>
-        )}
-
-        {draft.length === 0 && status.kind !== 'reading' && (
-          <p className={s.empty}>
-            아직 시간표가 없습니다.
-            <br />
-            이미지를 첨부하거나 아래에서 직접 넣으세요.
-          </p>
-        )}
-
-        {draft.length > 0 && (
-          <div className={s.listHead}>
-            <span className={s.listCount}>{draft.length}칸</span>
-            <button
-              type="button"
-              className={s.textButton}
-              onClick={() => {
-                onClear();
-                setDraft([]);
-                setWarnings([]);
-              }}
-            >
-              모두 지우기
-            </button>
-          </div>
         )}
 
         <ul className={s.rows}>
@@ -314,7 +353,7 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
             onClose();
           }}
         >
-          {draft.length}칸 저장
+          {draft.length > 0 ? `${draft.length}칸 저장` : '저장'}
         </button>
       </footer>
     </div>

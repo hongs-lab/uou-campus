@@ -2,25 +2,25 @@ import { style, styleVariants } from '@vanilla-extract/css';
 import { elevation, flex, font, layout, media, spacing, theme } from '@/styles';
 
 /*
- * 단추의 크기를 세 단계로 둔다.
+ * 이 창을 다시 짜면서 버린 것들.
  *
- * 크기마다 높이와 모서리가 함께 자란다. 같은 곡률로 보이게 하려면 큰 단추일수록
- * 모서리도 커져야 한다 — 52px 짜리에 6px 을 주면 각진 널빤지가 된다.
+ * 하나, 창을 가로지르는 큰 단추. 폭을 꽉 채운 단추는 「여기 말고는 누를 데가
+ * 없다」는 뜻인데 이 창에는 고칠 것이 열 몇 줄이나 있다. 끝내는 단추는 오른쪽
+ * 아래에 작게 둔다 — 글을 다 읽고 눈이 마지막으로 닿는 자리다.
  *
- *   큼(52) — 이 화면을 끝내는 것. 저장, 그리고 표가 비었을 때의 첨부
- *   중간(46) — 곁들이는 것. 취소, 표가 찼을 때의 다시 읽기
- *   작음(32) — 지나가는 것. 지우기, 칸 추가
+ * 둘, 줄마다 두른 테두리. 열한 줄을 다 네모로 싸면 창이 상자 무더기가 된다.
+ * 줄은 얇은 선으로만 가르고, 테두리는 손볼 곳에만 남긴다.
+ *
+ * 셋, 브라우저가 그려 주는 드롭다운. 손대지 않은 회색 화살표 하나가 나머지
+ * 공들인 것을 다 무르게 만든다.
  */
+
+/* ── 단추 ─────────────────────────────────────────────────────────────── */
+
 const pressable = style({
   transition: 'background-color 120ms ease, border-color 120ms ease',
   ':disabled': { cursor: 'default' },
-  /*
-   * 눌린 자리를 색이 아니라 크기로 알린다.
-   *
-   * 색만 바꾸면 손가락에 가려 안 보인다. 살짝 줄어드는 쪽은 손가락 둘레로
-   * 드러나서, 가려진 채로도 눌렸다는 것이 보인다.
-   */
-  ':active': { transform: 'scale(0.985)' },
+  ':active': { transform: 'scale(0.98)' },
   selectors: {
     '&:focus-visible': {
       outline: `2px solid ${theme.accent}`,
@@ -30,43 +30,51 @@ const pressable = style({
   },
 });
 
-const sizes = {
-  large: { minHeight: '52px', borderRadius: layout.radius.lg },
-  medium: { minHeight: '46px', borderRadius: layout.radius.lg },
-  small: {
-    minHeight: '32px',
-    padding: `0 ${spacing.sm}`,
+/** 채운 단추. 이 창에 하나뿐이다 — 다음 걸음이 어디인지 가리키는 것이 일이다. */
+const solid = {
+  backgroundColor: theme.accent,
+  color: theme.onAccent,
+  ':hover': { backgroundColor: '#12894A' },
+  ':disabled': { backgroundColor: theme.gray[200], color: theme.textTertiary },
+} as const;
+
+/** 테두리만. 그만두거나 되돌리는 자리. */
+const outline = {
+  border: `1px solid ${theme.outline}`,
+  backgroundColor: theme.surface,
+  color: theme.textSecondary,
+  ':hover': { backgroundColor: theme.gray[50], color: theme.textPrimary },
+} as const;
+
+/** 바탕도 테두리도 없는 것. 줄 사이에 끼어 있어도 소란스럽지 않다. */
+const ghost = {
+  color: theme.textSecondary,
+  ':hover': { backgroundColor: theme.gray[100], color: theme.textPrimary },
+} as const;
+
+const button = {
+  /** 창을 끝내는 것. 폭은 글에 맞춘다. */
+  primary: {
+    height: '44px',
+    padding: `0 ${spacing.lg}`,
+    borderRadius: layout.radius.md,
+  },
+  /** 곁들이는 것. */
+  secondary: {
+    height: '44px',
+    padding: `0 ${spacing.md}`,
+    borderRadius: layout.radius.md,
+  },
+  /** 줄 사이를 지나가는 것. */
+  tiny: {
+    height: '30px',
+    padding: `0 10px`,
     borderRadius: layout.radius.sm,
   },
 } as const;
 
-/** 채운 단추. 화면에 하나뿐이어야 한다 — 강조색은 길잡이지 장식이 아니다. */
-const fill = {
-  backgroundColor: theme.accent,
-  color: theme.onAccent,
-  ':hover': { backgroundColor: '#128644' },
-  ':disabled': { opacity: 0.45 },
-} as const;
-
-/** 옅은 단추. 강조색을 쓰되 화면의 주인 자리는 채운 단추에 넘긴다. */
-const weak = {
-  backgroundColor: theme.accentSoft,
-  color: theme.accent,
-  ':hover': { backgroundColor: theme.accentTint },
-  ':disabled': { opacity: 0.55 },
-} as const;
-
-/** 테두리만 있는 단추. 되돌리거나 그만두는 자리. */
-const quiet = {
-  border: `1px solid ${theme.outline}`,
-  backgroundColor: theme.surface,
-  color: theme.textSecondary,
-  ':hover': { backgroundColor: theme.gray[50], borderColor: theme.gray[300] },
-} as const;
-
 /* ── 판 ───────────────────────────────────────────────────────────────── */
 
-/* 장소 고르기(PlacePicker)와 같은 꼴의 전체 화면. 손에 든 화면에서 표를 고치려면 자리가 필요하다. */
 export const sheet = style([
   flex.COLUMN_FLEX,
   {
@@ -81,31 +89,21 @@ export const sheet = style([
 
     '@media': {
       /*
-       * 넓은 화면에서는 화면을 통째로 덮지 않는다.
+       * 넓은 화면에서는 좁은 카드로 앉는다.
        *
-       * 폰에서야 표를 고치려면 화면이 다 필요하지만, 데스크톱에서 같은 것을
-       * 그대로 펼치면 글줄이 지나치게 길어지고 저장 단추가 창을 가로지른다.
-       * 가운데 카드로 앉혀 읽을 만한 폭만 쓴다 — 지도 위에 뜨는 다른 패널들과
-       * 같은 꼴이다.
+       * 620px 을 쓰다 520px 로 줄였다. 이 창에서 한 줄이 실어 나르는 것은 요일과
+       * 시각과 강의실 셋뿐이라, 폭이 남으면 그만큼 허전해진다. 좁게 세운 쪽이
+       * 오히려 다부지다.
        */
       [media.WIDE]: {
-        /*
-         * 위아래를 다 붙들지 않고 내용만큼만 선다.
-         *
-         * 5vh~95vh 로 붙들어 두었더니 표가 비었을 때 판의 절반이 빈 흰 바닥이
-         * 됐다 — 첨부 단추와 저장 단추 사이가 한 화면쯤 벌어져서, 둘이 같은
-         * 창에 있다는 느낌이 사라진다. 아래를 놓고 최대 높이만 정해 두면,
-         * 짧으면 짧은 대로 서고 길면 그때 안에서 구른다.
-         */
         top: '50%',
         bottom: 'auto',
         left: '50%',
         right: 'auto',
         transform: 'translate(-50%, -50%)',
-        width: 'min(620px, 92vw)',
-        maxHeight: '88vh',
+        width: 'min(520px, 92vw)',
+        maxHeight: '86vh',
         borderRadius: layout.radius.xl,
-        border: `1px solid ${theme.outline}`,
         boxShadow: elevation.overlay,
         overflow: 'hidden',
       },
@@ -114,42 +112,36 @@ export const sheet = style([
 ]);
 
 /*
- * 머리에는 이름만 둔다.
+ * 머리에는 이름과 닫기만.
  *
- * 「지우기」를 제목 옆에 두었더니, 창을 열자마자 눈에 드는 셋 가운데 하나가
- * 표를 없애는 단추였다. 여기 온 사람이 하려는 일은 그게 아니다. 지우기는
- * 표가 실제로 있을 때 그 표 바로 위로 내렸다.
+ * 가르는 선을 뺐다. 아래 첫 줄과의 사이를 넉넉히 두면 선 없이도 갈린다 —
+ * 선 하나를 아끼면 창이 그만큼 트인다.
  */
 export const head = style([
   flex.VERTICAL,
   {
     flexShrink: 0,
     gap: spacing.sm,
-    padding: `${spacing.md} ${spacing.sm} ${spacing.md} ${spacing.lg}`,
-    borderBottom: `1px solid ${theme.outline}`,
-    '@media': {
-      [media.RAIL]: { padding: `${spacing.sm} ${spacing.sm}` },
-    },
+    padding: `${spacing.lg} ${spacing.md} ${spacing.sm} ${spacing.lg}`,
   },
 ]);
 
 export const title = style([
   font.appTitle,
-  { flex: 1, minWidth: 0, color: theme.textPrimary },
+  { flex: 1, minWidth: 0, color: theme.textPrimary, letterSpacing: '-0.01em' },
 ]);
 
 export const close = style([
   pressable,
   flex.CENTER,
+  ghost,
   {
     flexShrink: 0,
-    width: '40px',
-    height: '40px',
+    width: '36px',
+    height: '36px',
     borderRadius: layout.radius.circle,
-    fontSize: '22px',
+    fontSize: '20px',
     lineHeight: 1,
-    color: theme.textSecondary,
-    ':hover': { backgroundColor: theme.gray[100], color: theme.textPrimary },
   },
 ]);
 
@@ -162,32 +154,52 @@ export const body = style([
     overflowY: 'auto',
     overscrollBehavior: 'contain',
     WebkitOverflowScrolling: 'touch',
-    padding: spacing.lg,
-    '@media': { [media.RAIL]: { padding: spacing.md } },
+    padding: `0 ${spacing.lg} ${spacing.lg}`,
+    '@media': { [media.RAIL]: { padding: `0 ${spacing.md} ${spacing.md}` } },
   },
 ]);
 
-/* ── 첨부 ─────────────────────────────────────────────────────────────── */
+/* ── 아직 아무것도 없을 때 ────────────────────────────────────────────── */
 
 /**
- * 첨부 단추는 표가 있느냐에 따라 무게가 바뀐다.
+ * 표가 없을 때는 이 창에서 할 일이 첨부 하나뿐이다.
  *
- * 표가 비었으면 이 화면에서 할 일은 첨부뿐이다 — 채운 단추로 세운다. 표가
- * 차고 나면 할 일은 저장으로 넘어가고, 다시 읽기는 곁가지가 된다 — 옅은
- * 단추로 물러선다. 채운 단추가 한 화면에 둘이면 어느 쪽을 눌러야 할지
- * 알려 주는 힘을 서로 깎아먹는다.
- *
- * 점선 테두리는 뗐다. 점선은 「여기로 끌어다 놓으라」는 뜻인데 이건 그런
- * 자리가 아니어서, 없는 약속을 그려 보이고 있었다.
+ * 그러면 화면도 그 하나만 말해야 한다. 가운데로 모으고, 무엇을 가져오면 되는지
+ * 시간표 모양 그림으로 보여 준 다음, 단추를 아래 붙인다. 여기서만 폭을 채우지
+ * 않는다 — 첨부는 이 화면의 유일한 다음 걸음이라, 크기로 그걸 말해도 거짓이
+ * 아니다. 그래도 창을 가로지르지는 않게 두었다.
  */
-export const upload = styleVariants({
-  strong: [pressable, font.action, sizes.large, fill, { width: '100%' }],
-  weak: [pressable, font.action, sizes.medium, weak, { width: '100%' }],
+export const blank = style([
+  flex.COLUMN_CENTER,
+  {
+    gap: spacing.md,
+    padding: `${spacing.xl} ${spacing.md}`,
+    borderRadius: layout.radius.lg,
+    backgroundColor: theme.gray[50],
+    textAlign: 'center',
+  },
+]);
+
+/** 시간표 모양 그림. 무엇을 가져오면 되는지 글보다 빨리 말한다. */
+export const glyph = style({
+  width: '84px',
+  height: '64px',
+  flexShrink: 0,
 });
 
+export const blankTitle = style([
+  font.action,
+  { color: theme.textPrimary, letterSpacing: '-0.01em' },
+]);
+
 export const hint = style([
-  font.readable,
-  { color: theme.textSecondary, wordBreak: 'keep-all' },
+  font.body,
+  {
+    maxWidth: '30ch',
+    color: theme.textSecondary,
+    wordBreak: 'keep-all',
+    lineHeight: 1.65,
+  },
 ]);
 
 /** 설명 가운데 눌러야 할 곳. 에브리타임 안의 차림표 이름이라 그대로 옮긴다. */
@@ -197,29 +209,30 @@ export const path = style({
   whiteSpace: 'nowrap',
 });
 
+export const attach = style([
+  pressable,
+  font.bodyStrong,
+  button.primary,
+  solid,
+  { marginTop: spacing.xs },
+]);
+
 /* ── 알림 ─────────────────────────────────────────────────────────────── */
 
+/**
+ * 알림은 띠가 아니라 한 줄이다.
+ *
+ * 노란 상자로 두르면 창에서 가장 큰 덩어리가 되어, 정작 고쳐야 할 줄보다
+ * 목소리가 커진다. 왼쪽에 색 기둥만 세우고 나머지는 글에 맡긴다.
+ */
 export const warn = style([
   font.body,
   {
-    padding: `${spacing.sm} ${spacing.md}`,
-    borderRadius: layout.radius.md,
-    backgroundColor: theme.warnSoft,
+    padding: `${spacing.xs} 0 ${spacing.xs} ${spacing.md}`,
+    borderLeft: `3px solid ${theme.warn}`,
     color: theme.warn,
     wordBreak: 'keep-all',
-  },
-]);
-
-export const empty = style([
-  flex.COLUMN_CENTER,
-  font.readable,
-  {
-    gap: spacing.xs,
-    padding: `${spacing.xl} 0`,
-    borderRadius: layout.radius.lg,
-    border: `1px solid ${theme.outline}`,
-    color: theme.textTertiary,
-    textAlign: 'center',
+    lineHeight: 1.6,
   },
 ]);
 
@@ -227,51 +240,98 @@ export const empty = style([
 
 export const listHead = style([
   flex.BETWEEN,
-  { gap: spacing.sm, marginBottom: `-${spacing.sm}` },
+  { gap: spacing.sm, minHeight: '30px' },
 ]);
 
-export const listCount = style([font.bodyStrong, { color: theme.textPrimary }]);
-
-export const textButton = style([
-  pressable,
+export const listCount = style([
   font.bodyStrong,
-  sizes.small,
-  quiet,
-  { flexShrink: 0, ':hover': { color: theme.warn, borderColor: theme.warn } },
+  { color: theme.textPrimary, fontVariantNumeric: 'tabular-nums' },
 ]);
 
-export const rows = style([flex.COLUMN_FLEX, { gap: spacing.sm }]);
+export const listTools = style([flex.VERTICAL, { gap: spacing.xs }]);
+
+export const tool = styleVariants({
+  plain: [pressable, font.bodyStrong, button.tiny, ghost],
+  danger: [
+    pressable,
+    font.bodyStrong,
+    button.tiny,
+    ghost,
+    { ':hover': { backgroundColor: theme.errorSoft, color: theme.error } },
+  ],
+});
+
+/**
+ * 줄은 네모로 싸지 않는다. 얇은 선으로만 가른다.
+ *
+ * 열한 줄을 다 상자로 만들면 창이 상자 무더기가 되고, 그중 어느 상자를 봐야
+ * 하는지가 되레 안 보인다. 평평하게 두면 테두리 하나만으로도 「이 줄」이라고
+ * 가리킬 수 있다.
+ */
+export const rows = style([
+  flex.COLUMN_FLEX,
+  { borderTop: `1px solid ${theme.gray[100]}` },
+]);
 
 const rowBase = style([
   flex.COLUMN_FLEX,
   {
     gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: layout.radius.lg,
-    border: `1px solid ${theme.outline}`,
-    backgroundColor: theme.surface,
+    padding: `${spacing.md} 0`,
+    borderBottom: `1px solid ${theme.gray[100]}`,
   },
 ]);
 
 export const row = style([rowBase]);
 
-/** 강의실이 캠퍼스 건물과 안 맞는 칸. 먼저 눈에 띄어야 고친다. */
+/**
+ * 손볼 줄. 왼쪽에 기둥만 세운다.
+ *
+ * 바탕까지 노랗게 칠했더니 못 읽은 줄이 잇달아 있을 때 — 흔한 일이다 — 서너
+ * 줄이 한 덩어리 노란 판으로 뭉쳐서, 몇 줄이 문제인지가 되레 안 보였다. 그건
+ * 강조가 아니라 배경이다. 기둥은 줄마다 끊기므로 세면 세어진다.
+ */
 export const rowBad = style([
   rowBase,
-  { borderColor: theme.warn, backgroundColor: theme.warnSoft },
+  {
+    position: 'relative',
+    selectors: {
+      /*
+       * 기둥을 테두리로 그리면 줄과 같은 높이라, 손볼 줄이 잇달으면 위아래가
+       * 맞닿아 한 줄기로 이어져 버린다. 위아래를 조금씩 떼어 도막으로 세운다 —
+       * 그래야 세 줄인지 네 줄인지가 세어진다.
+       */
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        left: `-${spacing.sm}`,
+        top: '14px',
+        bottom: '14px',
+        width: '3px',
+        borderRadius: '2px',
+        backgroundColor: theme.warn,
+      },
+    },
+  },
 ]);
 
 export const rowTop = style([flex.VERTICAL, { gap: spacing.xs }]);
-export const rowBottom = style([
-  flex.VERTICAL,
-  { flexWrap: 'wrap', gap: spacing.sm },
-]);
+export const rowBottom = style([flex.VERTICAL, { gap: spacing.sm }]);
+
+/*
+ * 드롭다운에서 브라우저 기본 옷을 벗긴다.
+ *
+ * 손대지 않은 회색 화살표 하나가 나머지 공들인 것을 다 무르게 만든다. 화살표는
+ * 직접 그려 넣는다 — 글자색과 같은 회색으로.
+ */
+const CHEVRON =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
 
 const field = style([
   font.body,
   {
-    minHeight: '40px',
-    padding: `0 ${spacing.sm}`,
+    minHeight: '38px',
+    padding: `0 10px`,
     borderRadius: layout.radius.sm,
     border: `1px solid ${theme.outline}`,
     backgroundColor: theme.surface,
@@ -287,9 +347,21 @@ const field = style([
   },
 ]);
 
-export const day = style([field, { flexShrink: 0, width: '60px' }]);
-export const hour = style([field, { flexShrink: 0, width: '86px' }]);
-export const dash = style([font.body, { color: theme.textTertiary }]);
+const picker = style([
+  field,
+  {
+    appearance: 'none',
+    paddingRight: '26px',
+    backgroundImage: CHEVRON,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 10px center',
+    cursor: 'pointer',
+  },
+]);
+
+export const day = style([picker, { flexShrink: 0, width: '62px' }]);
+export const hour = style([picker, { flexShrink: 0, width: '88px' }]);
+export const dash = style([font.body, { color: theme.gray[300] }]);
 
 export const remove = style([
   pressable,
@@ -297,13 +369,13 @@ export const remove = style([
   {
     flexShrink: 0,
     marginLeft: 'auto',
-    width: '32px',
-    height: '32px',
+    width: '30px',
+    height: '30px',
     borderRadius: layout.radius.circle,
-    fontSize: '18px',
+    fontSize: '17px',
     lineHeight: 1,
-    color: theme.textTertiary,
-    ':hover': { backgroundColor: theme.warnSoft, color: theme.warn },
+    color: theme.gray[300],
+    ':hover': { backgroundColor: theme.errorSoft, color: theme.error },
   },
 ]);
 
@@ -311,68 +383,65 @@ export const room = style([
   field,
   {
     flexShrink: 0,
-    width: '100px',
+    width: '96px',
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
+    letterSpacing: '0.02em',
     /*
-     * 아직 안 적힌 칸이 적힌 칸처럼 보이면 안 된다.
-     *
-     * 굵기까지 물려받는 바람에 본보기로 걸어 둔 `7-615` 가 실제로 읽어 낸 값과
-     * 한눈에 구분되지 않았다. 못 읽은 칸을 찾으라고 만든 화면에서 그게 제일
-     * 큰 흠이다.
+     * 아직 안 적힌 칸이 적힌 칸처럼 보이면 안 된다. 굵기까지 물려받는 바람에
+     * 본보기로 걸어 둔 `7-615` 가 실제로 읽어 낸 값과 구분되지 않았다.
      */
-    '::placeholder': { fontWeight: 400, color: theme.textTertiary },
+    '::placeholder': {
+      fontWeight: 400,
+      letterSpacing: 0,
+      color: theme.gray[300],
+    },
   },
 ]);
 
 export const place = style([
   font.body,
-  { flexShrink: 0, color: theme.textSecondary },
+  { flex: 1, minWidth: 0, color: theme.textSecondary },
 ]);
 
 export const placeBad = style([
   font.bodyStrong,
-  { flexShrink: 0, color: theme.warn },
+  { flex: 1, minWidth: 0, color: theme.warn },
 ]);
 
 export const addRow = style([
   pressable,
   font.bodyStrong,
-  sizes.small,
-  quiet,
-  {
-    flexShrink: 0,
-    alignSelf: 'flex-start',
-    ':hover': { color: theme.textPrimary, borderColor: theme.gray[300] },
-  },
+  button.tiny,
+  ghost,
+  { alignSelf: 'flex-start', marginTop: `-${spacing.xs}` },
 ]);
 
 /* ── 발 ───────────────────────────────────────────────────────────────── */
 
+/**
+ * 끝내는 단추는 오른쪽 아래에 모은다.
+ *
+ * 창을 가로지르는 큰 단추를 쓰다 그만뒀다. 폭을 꽉 채운 단추는 「여기 말고는
+ * 누를 데가 없다」는 뜻인데, 이 창에는 그 전에 봐야 할 줄이 열 몇이나 있다.
+ * 글을 다 읽고 눈이 마지막으로 닿는 자리에 두는 편이 순서에 맞는다.
+ */
 export const foot = style([
-  flex.VERTICAL,
+  flex.END,
   {
     flexShrink: 0,
     gap: spacing.sm,
-    padding: spacing.lg,
-    borderTop: `1px solid ${theme.outline}`,
+    padding: `${spacing.md} ${spacing.lg}`,
+    borderTop: `1px solid ${theme.gray[100]}`,
     backgroundColor: theme.surface,
-    '@media': { [media.RAIL]: { padding: spacing.md } },
   },
 ]);
 
 export const cancel = style([
   pressable,
-  font.action,
-  sizes.medium,
-  quiet,
-  { flexShrink: 0, padding: `0 ${spacing.lg}` },
+  font.bodyStrong,
+  button.secondary,
+  outline,
 ]);
 
-export const save = style([
-  pressable,
-  font.action,
-  sizes.large,
-  fill,
-  { flex: 1 },
-]);
+export const save = style([pressable, font.bodyStrong, button.primary, solid]);
