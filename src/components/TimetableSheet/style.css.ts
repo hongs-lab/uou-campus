@@ -341,14 +341,15 @@ const field = style([
     border: `1px solid ${theme.outline}`,
     backgroundColor: theme.surface,
     color: theme.textPrimary,
-    transition: 'border-color 120ms ease, box-shadow 120ms ease',
-    selectors: {
-      '&:focus-visible': {
-        outline: 'none',
-        borderColor: theme.accent,
-        boxShadow: `0 0 0 3px ${theme.accentSoft}`,
-      },
-    },
+    /*
+     * 손댄 초점 표시를 뗐다.
+     *
+     * 초록 테두리에 옅은 초록 띠를 둘러 놨었는데, 글상자는 눌러서 들어가는 자리라
+     * 누를 때마다 그게 떴다. 이미 자기가 누른 칸을 그렇게까지 알려 줄 이유가 없다.
+     *
+     * 대신 브라우저가 그리는 초점선은 그대로 둔다. `outline: none` 으로 그것까지
+     * 지우면, 자판만으로 칸을 옮겨 다니는 사람이 지금 어디에 있는지 알 길이 없어진다.
+     */
   },
 ]);
 
@@ -400,6 +401,20 @@ export const room = style([
       fontWeight: 400,
       letterSpacing: 0,
       color: theme.gray[300],
+    },
+    selectors: {
+      /*
+       * 이 글상자에서만 초점 링을 끈다.
+       *
+       * 전역에 걸어 둔 초록 링은 자판만으로 화면을 돌아다니는 사람을 위한 것인데,
+       * 글상자는 눌러서 들어가는 자리라 누를 때마다 그게 떴다. 이미 자기가 누른
+       * 칸을 그렇게까지 알려 줄 이유가 없다.
+       *
+       * 여기서만 꺼도 되는 것은 글상자에는 깜빡이는 커서가 있기 때문이다. 그게
+       * 곧 초점 표시라, 링을 떼도 지금 어디에 있는지 알 수 있다. 커서가 없는
+       * 드롭다운과 단추는 링을 그대로 둔다.
+       */
+      '&:focus-visible': { outline: 'none' },
     },
   },
 ]);
