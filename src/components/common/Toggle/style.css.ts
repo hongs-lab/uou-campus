@@ -28,7 +28,7 @@ export const box = style({
   width: '16px',
   height: '16px',
   marginTop: '1px',
-  borderRadius: '4px',
+  borderRadius: layout.radius.xs,
   border: `1.5px solid ${theme.gray[300]}`,
   backgroundColor: theme.surface,
   transition: 'background-color 0.12s, border-color 0.12s',

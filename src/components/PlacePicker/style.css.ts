@@ -46,7 +46,7 @@ export const close = style([
     flexShrink: 0,
     width: '36px',
     height: '36px',
-    borderRadius: '50%',
+    borderRadius: layout.radius.circle,
     fontSize: '20px',
     lineHeight: 1,
     color: theme.textSecondary,
@@ -116,14 +116,18 @@ export const quickRow = style([
   },
 ]);
 
+/*
+ * 줄에 손이 얹히면 줄 바탕이 `accentSoft` 로 바뀐다. 이 동그라미까지 같은
+ * 톤이면 그 순간 바탕에 녹아 사라지므로, 한 단계 진한 톤으로 띄워 둔다.
+ */
 export const quickMark = style([
   flex.CENTER,
   {
     flexShrink: 0,
     width: '26px',
     height: '26px',
-    borderRadius: '50%',
-    backgroundColor: theme.accentSoft,
+    borderRadius: layout.radius.circle,
+    backgroundColor: theme.accentTint,
     color: theme.accent,
     fontSize: '13px',
   },
@@ -195,11 +199,12 @@ const rowBase = style([
 
 export const row = style([rowBase]);
 
+/** 이미 골라 둔 곳. 손을 얹으면 한 단계만 진해진다. */
 export const rowOn = style([
   rowBase,
   {
     backgroundColor: theme.accentSoft,
-    ':hover': { backgroundColor: theme.accentSoft },
+    ':hover': { backgroundColor: theme.accentTint },
   },
 ]);
 

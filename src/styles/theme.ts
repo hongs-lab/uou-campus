@@ -21,6 +21,13 @@ const theme = {
   accent: '#16A152',
   /** 위 색을 흰 바탕에 10% 로 얹은 톤. */
   accentSoft: '#E8F6EE',
+  /**
+   * 같은 색 20%. `accentSoft` 위에 한 겹 더 얹어야 할 때만 쓴다.
+   *
+   * 연한 톤이 하나뿐이면 강조 바탕 위에 얹힌 강조 요소가 바탕에 녹아
+   * 사라진다. 한 단계를 더 두어 그 자리를 메운다.
+   */
+  accentTint: '#D0ECDC',
   onAccent: '#FFFFFF',
 
   warn: '#B45309',

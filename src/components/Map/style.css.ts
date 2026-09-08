@@ -1,5 +1,5 @@
 import { globalStyle, style } from '@vanilla-extract/css';
-import { elevation, flex, font, theme } from '@/styles';
+import { elevation, flex, font, layout, theme } from '@/styles';
 
 export const container = style({
   position: 'absolute',
@@ -19,7 +19,7 @@ const dot = style([
   {
     width: '22px',
     height: '22px',
-    borderRadius: '50%',
+    borderRadius: layout.radius.circle,
     fontSize: '10px',
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
@@ -53,7 +53,7 @@ export const gate = style([
 export const junction = style({
   width: '12px',
   height: '12px',
-  borderRadius: '50%',
+  borderRadius: layout.radius.circle,
   backgroundColor: theme.warnSoft,
   border: `2px solid ${theme.warn}`,
   cursor: 'pointer',
@@ -88,7 +88,7 @@ export const approx = style({
 export const here = style({
   width: '18px',
   height: '18px',
-  borderRadius: '50%',
+  borderRadius: layout.radius.circle,
   backgroundColor: '#2563EB',
   border: `3px solid ${theme.gray[0]}`,
   boxShadow: '0 0 0 6px rgba(37, 99, 235, 0.18)',
@@ -99,7 +99,7 @@ globalStyle('.leaflet-tooltip.campus-label', {
   ...font.caption,
   padding: '1px 6px',
   border: 'none',
-  borderRadius: '4px',
+  borderRadius: layout.radius.xs,
   backgroundColor: 'rgba(255, 255, 255, 0.92)',
   color: theme.textPrimary,
   boxShadow: elevation[1],

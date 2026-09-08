@@ -70,7 +70,7 @@ export const close = style([
     flexShrink: 0,
     width: '24px',
     height: '24px',
-    borderRadius: '50%',
+    borderRadius: layout.radius.circle,
     fontSize: '14px',
     lineHeight: 1,
     color: theme.textTertiary,
