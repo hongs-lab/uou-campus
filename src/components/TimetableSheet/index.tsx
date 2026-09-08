@@ -8,6 +8,7 @@ import {
   placeForRoom,
 } from '@/timetable/room';
 import { formatClock } from '@/timetable/schedule';
+import ulrinee from './ulrinee-campus-tour.webp';
 import * as s from './style.css';
 
 interface Props {
@@ -32,12 +33,23 @@ const inOrder = (list: ClassSlot[]) =>
   [...list].sort((a, b) => a.day - b.day || a.startMinutes - b.startMinutes);
 
 /**
- * 시간표를 올리고, 읽은 결과를 확인하는 화면.
+ * 울산대 마스코트 울리니. 지도를 펴 들고 갈 길을 보고 있다.
  *
- * 그림에서 읽은 값을 곧바로 쓰지 않는다. 글자 인식은 틀린다 — 틀린 강의실로
- * 엉뚱한 건물을 안내하는 것보다, 한 번 보여 주고 고치게 하는 편이 낫다.
- * 못 읽은 칸은 붉게 세워 먼저 눈에 띄게 한다.
+ * 빈 화면에 학교 것을 하나 놓기로 했다. 후보로 CI 시그니처가 먼저 나왔지만
+ * 그건 대학을 공식적으로 표기하는 마크라 머리글이나 공식 매체의 자리다.
+ * 창 한가운데 삽화로 앉히면 「무엇을 첨부하라」는 말은 한 마디도 못 하면서
+ * 마크만 닳는다. 빈 화면은 본래 캐릭터의 자리다.
+ *
+ * 여러 그림 가운데 지도를 든 것을 골랐다. 이 앱이 하는 일 그 자체이고,
+ * 캐릭터 색이 강조색(울산대 CI 그린)과 같은 계열이라 화면에 겉돌지 않는다.
+ *
+ * 크기만 비례 그대로 줄여 쓴다. 형태·비례를 손대는 것은 대학 CI 규정이
+ * 금하고 있고, 손댈 이유도 없다. 출처와 이용 조건은 README 에 적어 두었다.
  */
+const Ulrinee = () => (
+  <img className={s.glyph} src={ulrinee} alt="" aria-hidden="true" />
+);
+
 const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
   const [draft, setDraft] = useState<ClassSlot[]>(() => inOrder(slots));
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
@@ -141,24 +153,56 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
           }}
         />
 
-        <button
-          type="button"
-          className={draft.length > 0 ? s.upload.weak : s.upload.strong}
-          disabled={status.kind === 'reading'}
-          onClick={() => fileRef.current?.click()}
-        >
-          {status.kind === 'reading'
-            ? status.note
-            : draft.length > 0
-              ? '다른 이미지로 다시 읽기'
-              : '시간표 이미지 첨부하기'}
-        </button>
-
-        <p className={s.hint}>
-          에브리타임에서{' '}
-          <b className={s.path}>시간표 → 설정 아이콘 → 이미지 저장</b>
-          으로 받은 이미지를 첨부해주세요.
-        </p>
+        {/*
+          표가 없을 때는 이 창에서 할 일이 첨부 하나뿐이라, 화면도 그 하나만
+          말한다. 표가 차고 나면 첨부는 줄 목록 위의 작은 단추로 물러선다.
+        */}
+        {draft.length === 0 ? (
+          <div className={s.blank}>
+            <Ulrinee />
+            <p className={s.blankTitle}>
+              {status.kind === 'reading' ? status.note : '시간표 이미지 첨부'}
+            </p>
+            <p className={s.hint}>
+              에브리타임에서{' '}
+              <b className={s.path}>시간표 → 설정 아이콘 → 이미지 저장</b>
+              으로 받은 이미지를 첨부해주세요.
+            </p>
+            <button
+              type="button"
+              className={s.attach}
+              disabled={status.kind === 'reading'}
+              onClick={() => fileRef.current?.click()}
+            >
+              이미지 고르기
+            </button>
+          </div>
+        ) : (
+          <div className={s.listHead}>
+            <span className={s.listCount}>{draft.length}칸</span>
+            <div className={s.listTools}>
+              <button
+                type="button"
+                className={s.tool.plain}
+                disabled={status.kind === 'reading'}
+                onClick={() => fileRef.current?.click()}
+              >
+                {status.kind === 'reading' ? status.note : '다시 읽기'}
+              </button>
+              <button
+                type="button"
+                className={s.tool.danger}
+                onClick={() => {
+                  onClear();
+                  setDraft([]);
+                  setWarnings([]);
+                }}
+              >
+                모두 지우기
+              </button>
+            </div>
+          </div>
+        )}
 
         {status.kind === 'failed' && <p className={s.warn}>{status.note}</p>}
         {warnings.map((note) => (
@@ -168,34 +212,9 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
         ))}
         {unresolved > 0 && (
           <p className={s.warn}>
-            {unresolved}칸은 강의실을 캠퍼스 건물과 못 맞췄습니다 — 아래 붉은
-            칸을 「건물번호-호실」 로 고쳐 주세요.
+            {unresolved}칸은 강의실을 캠퍼스 건물과 못 맞췄습니다 — 표시된 칸을
+            「건물번호-호실」 로 고쳐 주세요.
           </p>
-        )}
-
-        {draft.length === 0 && status.kind !== 'reading' && (
-          <p className={s.empty}>
-            아직 시간표가 없습니다.
-            <br />
-            이미지를 첨부하거나 아래에서 직접 넣으세요.
-          </p>
-        )}
-
-        {draft.length > 0 && (
-          <div className={s.listHead}>
-            <span className={s.listCount}>{draft.length}칸</span>
-            <button
-              type="button"
-              className={s.textButton}
-              onClick={() => {
-                onClear();
-                setDraft([]);
-                setWarnings([]);
-              }}
-            >
-              모두 지우기
-            </button>
-          </div>
         )}
 
         <ul className={s.rows}>
@@ -314,7 +333,7 @@ const TimetableSheet = ({ graph, slots, onSave, onClear, onClose }: Props) => {
             onClose();
           }}
         >
-          {draft.length}칸 저장
+          {draft.length > 0 ? `${draft.length}칸 저장` : '저장'}
         </button>
       </footer>
     </div>
