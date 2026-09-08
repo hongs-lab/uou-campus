@@ -51,6 +51,25 @@ export const normalizeRoom = (raw: string): string =>
     .join('')
     .toUpperCase();
 
+/**
+ * 강의실 코드처럼 생긴 글자인지.
+ *
+ * 그림에서 읽어 온 낱말 가운데 되살리기에 넣어 볼 것을 고르는 데 쓴다.
+ *
+ * **반드시 고르기 전에 `normalizeRoom` 을 거쳐야 한다.** 한때 이 검사가 읽은
+ * 원문에 그대로 걸려 있었는데, 그러면 위 헷갈림 표가 통째로 죽는다 — `43-4O2`
+ * 도 `l9-509` 도 고쳐지기 전에 버려져서, 고치라고 만든 것들이 한 번도 고쳐지지
+ * 않았다. 그래서 정돈을 이 안으로 들여놨다.
+ *
+ * 정돈을 거친 뒤라 생김새도 단순하다. 온갖 줄표는 이미 `-` 하나로 모였고,
+ * 사이의 빈칸도 없어졌고, 글자는 대문자다. 줄표 목록을 두 군데에 두고 어긋나게
+ * 둘 일도 이걸로 없다.
+ */
+const ROOM_LIKE = /^\d{1,2}-?[A-Z]?\d{2,4}$/;
+
+export const looksLikeRoomCode = (raw: string): boolean =>
+  ROOM_LIKE.test(normalizeRoom(raw));
+
 /** `7-615` → 7. 건물 번호를 못 읽으면 null. */
 export const buildingNoOf = (room: string): number | null => {
   const match = /^(\d{1,2})-/.exec(normalizeRoom(room));

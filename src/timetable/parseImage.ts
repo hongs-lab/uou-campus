@@ -1,5 +1,5 @@
 import type { Weekday } from '@/types/timetable';
-import { repairRoom } from './room';
+import { buildingNoOf, looksLikeRoomCode, repairRoom } from './room';
 
 /**
  * 에브리타임에서 내려받은 시간표 그림을 읽는다.
@@ -207,21 +207,32 @@ const OCR_ASSETS = {
  * 한국어 하나만 싣는다.
  *
  * 영어까지 실으면 13MB 가 더 붙는데, 재 보니 한국어만으로 요일·시각·강의실이
- * 다 읽힌다. 하이픈이 자주 빠져 `7-615` 가 `7615` 로 오지만 그건 `room.ts` 의
- * 되살리기가 잡는다.
+ * 다 읽힌다. 칸을 떼어 키워 넘기면 하이픈까지 그대로 온다. 그래도 작은 그림에서
+ * `7-615` 가 `7615` 로 오는 일은 남는데, 그건 `room.ts` 의 되살리기가 잡는다.
  */
 const OCR_LANGS = ['kor'];
 
+interface Reader {
+  read: (canvas: HTMLCanvasElement) => Promise<Word[]>;
+  close: () => Promise<void>;
+}
+
 /**
- * 글자 인식기는 쓸 때만 불러온다.
+ * 글자 인식기는 쓸 때만 불러오고, 한 번 세워 여러 번 쓴다.
  *
  * 4MB 가까이 되는 짐이라 첫 화면에 끼워 두면 안 된다. 시간표를 올리는 사람만,
  * 올리는 그 순간에 받는다. 한 번 받으면 브라우저가 들고 있는다.
+ *
+ * 세우고 무너뜨리는 일이 읽는 일보다 비싸다. 아래에서 그림 한 장을 수십 번
+ * 나눠 읽으므로, 인식기를 밖에 두고 돌려 쓴다.
+ *
+ * 읽는 동안의 진행률은 여기서 넘기지 않는다. 조각마다 0% 로 되감겨서, 그대로
+ * 내보내면 화면의 숫자가 왔다 갔다 한다. 몇 조각 중 몇째인지는 부르는 쪽이
+ * 알고 있으니 그쪽이 말한다. 여기서는 부속 내려받는 소식만 넘긴다.
  */
-const readWords = async (
-  canvas: HTMLCanvasElement,
+const openReader = async (
   onProgress?: (ratio: number, what: string) => void,
-): Promise<Word[]> => {
+): Promise<Reader> => {
   /*
    * tesseract 는 CommonJS 라, 번들러를 거치면 알맹이가 default 밑으로 들어간다.
    * 둘 다 받아 준다 — 한쪽만 보고 있다가는 조용히 멈춘다.
@@ -233,10 +244,12 @@ const readWords = async (
 
   const worker = await createWorker(OCR_LANGS, 1, {
     ...OCR_ASSETS,
-    logger: (m: { status: string; progress: number }) =>
-      onProgress?.(m.progress, m.status),
+    logger: (m: { status: string; progress: number }) => {
+      if (m.status !== 'recognizing text') onProgress?.(m.progress, m.status);
+    },
   });
-  try {
+
+  const read = async (canvas: HTMLCanvasElement): Promise<Word[]> => {
     const { data } = await worker.recognize(canvas, {}, { blocks: true });
     const words: Word[] = [];
     for (const block of data.blocks ?? [])
@@ -252,15 +265,165 @@ const readWords = async (
               bottom: word.bbox.y1,
             });
     return words;
-  } finally {
-    await worker.terminate();
-  }
+  };
+
+  return {
+    read,
+    close: async () => {
+      await worker.terminate();
+    },
+  };
 };
 
 const DAY_HEADS = ['월', '화', '수', '목', '금'];
 
-/** 강의실처럼 생긴 낱말. 하이픈이 빠져 붙어 온 것도 받는다. */
-const ROOM_LIKE = /^\d{1,2}\s*[-–—−]?\s*[A-Za-z]?\d{2,4}$/;
+/**
+ * 수업 칸 하나를 따로 떼어 그린다.
+ *
+ * 인식기에 한 칸씩 건네려고 만든다. 왜 나눠 주는지는 `parseTimetableImage` 에 적었다.
+ *
+ * 두 가지를 같이 한다. 하나는 키우기 — 에브리타임이 내보낸 그림에서 강의실
+ * 글자는 15px 밖에 안 되는데, 인식기는 그 두 배는 되어야 제대로 읽는다.
+ * 칸 너비를 재서 필요한 만큼만 키운다. 이미 큰 그림을 또 키워 봐야 느리기만
+ * 하다.
+ *
+ * 둘은 흰 여백 두르기 — 글자가 조각 가장자리에 닿아 있으면 인식기가 통째로
+ * 흘린다. 옆 칸 세로줄도 이 여백에 밀려 함께 빠진다.
+ */
+const CROP_WIDTH = 360;
+const CROP_MARGIN = 16;
+/** 칸 양옆의 세로 눈금선은 빼고 자른다. 글자로 읽힌다. */
+const CROP_INSET = 2;
+
+const cropBlock = (
+  source: HTMLCanvasElement,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+): HTMLCanvasElement | null => {
+  const x = Math.max(0, Math.round(left) + CROP_INSET);
+  const y = Math.max(0, Math.round(top));
+  const width = Math.min(source.width, Math.round(right) - CROP_INSET) - x;
+  const height = Math.min(source.height, Math.round(bottom)) - y;
+  if (width < 1 || height < 1) return null;
+
+  const scale = Math.min(4, Math.max(1, CROP_WIDTH / width));
+  const crop = document.createElement('canvas');
+  crop.width = Math.round(width * scale) + CROP_MARGIN * 2;
+  crop.height = Math.round(height * scale) + CROP_MARGIN * 2;
+
+  const ctx = crop.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, crop.width, crop.height);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    source,
+    x,
+    y,
+    width,
+    height,
+    CROP_MARGIN,
+    CROP_MARGIN,
+    crop.width - CROP_MARGIN * 2,
+    crop.height - CROP_MARGIN * 2,
+  );
+  return crop;
+};
+
+/**
+ * 잘라 낸 칸 하나에서 강의실을 고른다.
+ *
+ * 칸 안에 강의실처럼 생긴 낱말이 여럿일 수 있다. 과목명이나 교수 이름이 뭉개져
+ * 숫자로 읽히면 그게 먼저 걸린다 — `ICT융합개론` 은 늘 `107` 로 온다. 그래서
+ * 먼저 온 것을 집지 않고, **캠퍼스에 실제로 있는 건물 번호로 풀리는 것**을
+ * 고른다. 그런 게 여럿이면 아래쪽을 고른다 — 강의실은 칸의 마지막 줄에 적힌다.
+ */
+const roomInBlock = (
+  words: Word[],
+  knownBuildings: Set<number>,
+): { room: string; confidence: number } => {
+  const candidates = words.filter((w) => looksLikeRoomCode(w.text));
+  const resolves = (w: Word) => {
+    const no = buildingNoOf(repairRoom(w.text, knownBuildings));
+    return no !== null && knownBuildings.has(no);
+  };
+  const good = candidates.filter(resolves);
+  const pool = good.length > 0 ? good : candidates;
+  const pick = pool.reduce<Word | undefined>(
+    (best, w) => (!best || w.bottom > best.bottom ? w : best),
+    undefined,
+  );
+  return pick
+    ? {
+        room: repairRoom(pick.text, knownBuildings),
+        confidence: pick.confidence,
+      }
+    : { room: '', confidence: 0 };
+};
+
+interface Layout {
+  /** 요일 칸 다섯의 가운데 가로 자리. */
+  columns: number[];
+  /** 요일 칸 너비. */
+  pitch: number;
+  axis: TimeAxis;
+  /** 이보다 낮은 자국은 칸이 아니다. */
+  minHeight: number;
+}
+
+/**
+ * 그림에서 격자를 읽어 낸다 — 요일 칸이 어디고, 세로 어디가 몇 시인지.
+ *
+ * 사람이 알아야 할 만큼 잘못됐으면 할 말을 글로 돌려준다.
+ */
+const readLayout = (
+  canvas: HTMLCanvasElement,
+  words: Word[],
+): Layout | string => {
+  /* 요일 머리글의 가로 자리가 곧 요일 칸의 자리다. */
+  const heads = DAY_HEADS.map((label) => {
+    const hit = words.find(
+      (w) => w.text === label && w.y < canvas.height * 0.15,
+    );
+    return hit ? (hit.x + hit.right) / 2 : null;
+  });
+  if (heads.filter((x) => x !== null).length < 2)
+    return '요일 줄을 못 찾았습니다. 시간표 전체가 나온 그림인지 확인해 주세요.';
+
+  /* 못 읽은 요일은 읽힌 것들의 간격으로 메운다. 칸 너비는 일정하다. */
+  const firstIndex = heads.findIndex((x) => x !== null);
+  const lastIndex =
+    heads.length - 1 - [...heads].reverse().findIndex((x) => x !== null);
+  const pitch =
+    (heads[lastIndex]! - heads[firstIndex]!) / (lastIndex - firstIndex);
+  const columns = heads.map((x, i) =>
+    x !== null ? x : heads[firstIndex]! + (i - firstIndex) * pitch,
+  );
+
+  /* 왼쪽 시각 눈금. 전부 읽히지 않아도 두 개면 자가 선다. */
+  const leftEdge = columns[0] - pitch / 2;
+  const marks: { hour: number; y: number }[] = [];
+  for (const w of words) {
+    if (w.right > leftEdge) continue;
+    const hour = Number(/^(\d{1,2})\s*시?$/.exec(w.text)?.[1]);
+    if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue;
+    if (w.confidence < 60) continue;
+    marks.push({ hour, y: (w.y + w.bottom) / 2 });
+  }
+  const axis = fitTimeAxis(marks);
+  if (!axis)
+    return '왼쪽 시각 눈금을 못 읽었습니다. 시간이 함께 나온 그림이어야 합니다.';
+
+  /*
+   * 흰색만 바탕으로 보게 되면서 한두 픽셀짜리 눈금선까지 걸리는데, 한 교시의
+   * 삼분의 일도 안 되는 높이는 수업 칸일 수 없다.
+   */
+  const minHeight = Math.max(4, Math.round(HOUR / axis.minutesPerPixel / 3));
+
+  return { columns, pitch, axis, minHeight };
+};
 
 /* ── 전체 ─────────────────────────────────────────────────────────────── */
 
@@ -297,140 +460,89 @@ export const parseTimetableImage = async (
   ctx.drawImage(image, 0, 0);
   image.close();
 
-  const words = await readWords(canvas, onProgress);
+  const reader = await openReader(onProgress);
+  try {
+    /*
+     * 처음 한 번은 그림 전체를 읽는다. 여기서 얻는 건 격자뿐이다 — 요일 머리글과
+     * 왼쪽 시각 눈금. 둘 다 흰 바탕에 놓인 짧은 글자라 이 한 번으로 잘 읽힌다.
+     */
+    onProgress?.(0, 'recognizing text');
+    const layout = readLayout(canvas, await reader.read(canvas));
+    if (typeof layout === 'string') return { slots: [], warnings: [layout] };
+    const { columns, pitch, axis, minHeight } = layout;
 
-  /* 요일 머리글의 가로 자리가 곧 요일 칸의 자리다. */
-  const heads = DAY_HEADS.map((label) => {
-    const hit = words.find(
-      (w) => w.text === label && w.y < canvas.height * 0.15,
-    );
-    return hit ? (hit.x + hit.right) / 2 : null;
-  });
-  const known = heads.filter((x): x is number => x !== null);
-  if (known.length < 2) {
-    return {
-      slots: [],
-      warnings: [
-        '요일 줄을 못 찾았습니다. 시간표 전체가 나온 그림인지 확인해 주세요.',
-      ],
-    };
-  }
+    /* 색칠된 칸을 먼저 다 찾아 둔다. 몇 조각인지 알아야 진행률을 말할 수 있다. */
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const found: { day: Weekday; centre: number; run: Run }[] = [];
+    for (let day = 0; day < 5; day += 1) {
+      const centre = Math.round(columns[day]);
+      for (const run of runsInColumn(
+        data,
+        canvas.width,
+        canvas.height,
+        centre,
+        minHeight,
+      )) {
+        /* 한 교시의 절반도 안 되는 자국은 칸이 아니라 눈금이나 그림자다. */
+        if (minutesAt(axis, run.bottom) - minutesAt(axis, run.top) < HOUR / 2)
+          continue;
+        found.push({ day: day as Weekday, centre, run });
+      }
+    }
 
-  /* 못 읽은 요일은 읽힌 것들의 간격으로 메운다. 칸 너비는 일정하다. */
-  const firstIndex = heads.findIndex((x) => x !== null);
-  const lastIndex =
-    heads.length - 1 - [...heads].reverse().findIndex((x) => x !== null);
-  const pitch =
-    (heads[lastIndex]! - heads[firstIndex]!) / (lastIndex - firstIndex);
-  const columns = heads.map((x, i) =>
-    x !== null ? x : heads[firstIndex]! + (i - firstIndex) * pitch,
-  );
+    /*
+     * 강의실은 칸을 하나씩 떼어 읽는다.
+     *
+     * 한 장을 통째로 넘기던 때는 열에 아홉을 놓쳤다. 인식기의 판면 분석이
+     * 색칠된 격자를 문서로 못 보기 때문이다 — 재 보니 `ICT융합개론` 칸이
+     * 통째로 확신 0 짜리 낱말 하나로 뭉개져 나왔다. 자리를 이미 알고 있는데
+     * 그걸 인식기에게 다시 찾아내라고 시킬 이유가 없다.
+     *
+     * 960px 짜리 시간표 하나로 재 봤다. 통째로 넘기면 11칸 중 2칸, 그나마
+     * 하이픈이 빠진 `7615`. 칸마다 떼어 키워 넘기면 11칸 전부, 확신 88~91 에
+     * 하이픈까지 그대로. 조각이 작아 열한 번 읽는 데 270ms 면 된다.
+     */
+    const slots: ParsedSlot[] = [];
+    for (const [i, { day, centre, run }] of found.entries()) {
+      onProgress?.((i + 1) / (found.length + 1), 'recognizing text');
 
-  /* 왼쪽 시각 눈금. 전부 읽히지 않아도 두 개면 자가 선다. */
-  const leftEdge = columns[0] - pitch / 2;
-  const marks: { hour: number; y: number }[] = [];
-  for (const w of words) {
-    if (w.right > leftEdge) continue;
-    const hour = Number(/^(\d{1,2})\s*시?$/.exec(w.text)?.[1]);
-    if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue;
-    if (w.confidence < 60) continue;
-    marks.push({ hour, y: (w.y + w.bottom) / 2 });
-  }
-  const axis = fitTimeAxis(marks);
-  if (!axis) {
-    return {
-      slots: [],
-      warnings: [
-        '왼쪽 시각 눈금을 못 읽었습니다. 시간이 함께 나온 그림이어야 합니다.',
-      ],
-    };
-  }
-
-  const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  /*
-   * 이보다 낮은 자국은 칸이 아니다.
-   *
-   * 흰색만 바탕으로 보게 되면서 한두 픽셀짜리 눈금선까지 걸리는데, 한 교시의
-   * 삼분의 일도 안 되는 높이는 수업 칸일 수 없다.
-   */
-  const minHeight = Math.max(4, Math.round(HOUR / axis.minutesPerPixel / 3));
-
-  const slots: ParsedSlot[] = [];
-
-  for (let day = 0; day < 5; day += 1) {
-    const centre = Math.round(columns[day]);
-    for (const run of runsInColumn(
-      data,
-      canvas.width,
-      canvas.height,
-      centre,
-      minHeight,
-    )) {
       const startMinutes = snap(minutesAt(axis, run.top));
-      /* 정각으로 맞추다 보면 한 교시짜리가 0분으로 눌린다. 최소 한 시간은 준다. */
-      const endMinutes = Math.max(
-        snap(minutesAt(axis, run.bottom)),
-        startMinutes + HOUR,
+      const crop = cropBlock(
+        canvas,
+        centre - pitch / 2,
+        run.top,
+        centre + pitch / 2,
+        run.bottom,
       );
-      /* 한 교시의 절반도 안 되는 자국은 칸이 아니라 눈금이나 그림자다. */
-      if (minutesAt(axis, run.bottom) - minutesAt(axis, run.top) < HOUR / 2)
-        continue;
-
-      /*
-       * 낱말이 이 칸에 속하는지는 낱말의 가운데로 본다. 네 귀퉁이가 다 들어와야
-       * 한다고 하면, 칸 가장자리에 바싹 붙은 글자를 통째로 놓친다.
-       */
-      const inside = words.filter((w) => {
-        const cx = (w.x + w.right) / 2;
-        const cy = (w.y + w.bottom) / 2;
-        return (
-          Math.abs(cx - centre) < pitch / 2 &&
-          cy >= run.top - 4 &&
-          cy <= run.bottom + 4
-        );
-      });
-
-      /*
-       * 칸 안에 강의실처럼 생긴 낱말이 여럿일 수 있다.
-       *
-       * 과목명이나 교수 이름이 뭉개져 `101` 같은 숫자로 읽히면 그게 먼저 걸린다.
-       * 그래서 먼저 온 것을 집지 않고, **캠퍼스에 실제로 있는 건물 번호로
-       * 풀리는 것**을 고른다. 그런 게 여럿이면 아래쪽을 고른다 — 강의실은 칸의
-       * 마지막 줄에 적힌다.
-       */
-      const candidates = inside.filter((w) => ROOM_LIKE.test(w.text));
-      const resolves = (w: Word) => {
-        const no = /^(\d{1,2})-/.exec(repairRoom(w.text, knownBuildings))?.[1];
-        return no !== undefined && knownBuildings.has(Number(no));
-      };
-      const good = candidates.filter(resolves);
-      const pool = good.length > 0 ? good : candidates;
-      const roomWord = pool.reduce<Word | undefined>(
-        (best, w) => (!best || w.bottom > best.bottom ? w : best),
-        undefined,
-      );
-
       slots.push({
-        day: day as Weekday,
+        day,
         startMinutes,
-        endMinutes,
-        room: roomWord ? repairRoom(roomWord.text, knownBuildings) : '',
-        confidence: roomWord ? roomWord.confidence : 0,
+        /* 정각으로 맞추다 보면 한 교시짜리가 0분으로 눌린다. 최소 한 시간은 준다. */
+        endMinutes: Math.max(
+          snap(minutesAt(axis, run.bottom)),
+          startMinutes + HOUR,
+        ),
+        ...(crop
+          ? roomInBlock(await reader.read(crop), knownBuildings)
+          : { room: '', confidence: 0 }),
       });
     }
+    onProgress?.(1, 'recognizing text');
+
+    /*
+     * 못 읽은 칸이 몇인지는 여기서 말하지 않는다.
+     *
+     * 확인 화면이 지금 값을 보고 세고 있어서, 사람이 고친 뒤에도 여기서 만든 말이
+     * 남아 있으면 '고쳤는데 아직 못 읽었다' 는 거짓말이 된다. 그 몫은 화면에
+     * 맡기고, 여기서는 그림 자체가 잘못됐을 때만 말한다.
+     */
+    if (slots.length === 0)
+      warnings.push(
+        '수업 칸을 하나도 못 찾았습니다. 잘리지 않은 시간표 그림인지 확인해 주세요.',
+      );
+
+    return { slots, warnings };
+  } finally {
+    await reader.close();
   }
-
-  /*
-   * 못 읽은 칸이 몇인지는 여기서 말하지 않는다.
-   *
-   * 확인 화면이 지금 값을 보고 세고 있어서, 사람이 고친 뒤에도 여기서 만든 말이
-   * 남아 있으면 '고쳤는데 아직 못 읽었다' 는 거짓말이 된다. 그 몫은 화면에
-   * 맡기고, 여기서는 그림 자체가 잘못됐을 때만 말한다.
-   */
-  if (slots.length === 0)
-    warnings.push(
-      '수업 칸을 하나도 못 찾았습니다. 잘리지 않은 시간표 그림인지 확인해 주세요.',
-    );
-
-  return { slots, warnings };
 };
